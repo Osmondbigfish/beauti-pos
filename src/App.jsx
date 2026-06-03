@@ -67,7 +67,7 @@ function App() {
     name: '', price: '', type: 'product', category: '', requiresProcessing: false, defaultProcessingDays: 4, stock: ''
   });
 
-  // 新增：日期範圍篩選
+  // 日期範圍
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
@@ -389,58 +389,70 @@ function App() {
         <head>
           <title>Invoice - ${transaction.invoiceNumber}</title>
           <style>
-            @media print { @page { size: A5 portrait; margin: 8mm; } }
-            body { font-family: system-ui, sans-serif; padding: 12px; line-height: 1.45; font-size: 11px; }
+            @media print { @page { size: A5 portrait; margin: 6mm; } }
+            body { font-family: Georgia, "Times New Roman", serif; padding: 8mm; line-height: 1.5; font-size: 10px; color: #374151; }
             .header { text-align: center; margin-bottom: 8px; }
-            .logo { height: 65px; margin-bottom: 4px; }
-            h1 { color: #9f1239; margin: 0; font-size: 16px; }
-            table { width: 100%; border-collapse: collapse; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
-            th, td { padding: 7px 9px; text-align: left; border-bottom: 1px solid #f3e8ff; }
-            th { background: #374151; color: white; }
-            .total { text-align: right; font-size: 12px; margin-top: 10px; }
+            .logo-circle { width: 65px; height: 65px; background: #f3e8ff; border-radius: 50%; margin: 0 auto 6px; display: flex; align-items: center; justify-content: center; border: 1px solid #c084fc; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9.5px; }
+            th, td { padding: 5px 6px; border-bottom: 1px solid #f1f5f9; }
+            th { background: #f8fafc; font-weight: 600; }
+            .total { text-align: right; font-size: 10px; }
+            .thankyou { text-align: right; font-size: 11px; color: #6b7280; margin-top: 10px; }
           </style>
         </head>
         <body>
           <div class="header">
-            <img src="/logo.png" class="logo" />
-            <h1>${companyInfo.name}</h1>
-            <p style="margin:0; color:#9f1239; font-size:10px;">${companyInfo.english}</p>
+            <div class="logo-circle">
+              <img src="/logo.png" style="max-height:48px;max-width:48px;" />
+            </div>
+            <div style="font-size:20px;font-weight:700;color:#4c1d95;">INVOICE</div>
+            <div style="font-family:'Brush Script MT',cursive;font-size:12px;color:#6b7280;">麗明珠真髮中心</div>
           </div>
-          <h2 style="text-align:center; font-size:14px; margin:6px 0;">發 票 / 訂 單 INVOICE</h2>
-          <p style="font-size:10.5px; margin-bottom:8px;">
-            <strong>Invoice No:</strong> ${transaction.invoiceNumber} &nbsp;&nbsp;
-            <strong>Date:</strong> ${transaction.date} ${transaction.time}<br>
-            ${transaction.customerName ? `<strong>客戶：</strong> ${transaction.customerName}<br>` : ''}
-            ${transaction.customerPhone ? `電話：${transaction.customerPhone}<br>` : ''}
-          </p>
+
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:9.5px;">
+            <div>
+              <strong style="font-size:8.5px;color:#6b7280;">BILLED TO</strong><br>
+              ${transaction.customerName || '客戶'}<br>
+              ${transaction.customerPhone || ''}
+            </div>
+            <div style="text-align:right;">
+              <strong style="font-size:8.5px;color:#6b7280;">INVOICE NO</strong><br>
+              ${transaction.invoiceNumber}<br>
+              <strong style="font-size:8.5px;color:#6b7280;">DATE</strong><br>
+              ${transaction.date}
+            </div>
+          </div>
+
           <table>
             <thead>
               <tr>
-                <th>項目</th>
-                <th style="text-align:center">數量</th>
-                <th style="text-align:right">單價</th>
-                <th style="text-align:right">小計</th>
+                <th style="text-align:left;">項目</th>
+                <th style="text-align:center;">數量</th>
+                <th style="text-align:right;">單價</th>
+                <th style="text-align:right;">小計</th>
               </tr>
             </thead>
             <tbody>
               ${transaction.items.map(item => `
                 <tr>
                   <td>${item.name}</td>
-                  <td style="text-align:center">${item.qty}</td>
-                  <td style="text-align:right">HK$${item.price}</td>
-                  <td style="text-align:right">HK$${(item.price * item.qty).toFixed(0)}</td>
+                  <td style="text-align:center;">${item.qty}</td>
+                  <td style="text-align:right;">HK$${item.price}</td>
+                  <td style="text-align:right;">HK$${(item.price * item.qty).toFixed(0)}</td>
                 </tr>
-                ${item.pickupDate ? `<tr><td colspan="4" style="color:#c2416f; font-size:9.5px;">→ 預計取貨日期：${item.pickupDate}</td></tr>` : ''}
+                ${item.pickupDate ? `<tr><td colspan="4" style="color:#c026d3;font-size:8.5px;">→ 預計取貨日期：${item.pickupDate}</td></tr>` : ''}
               `).join('')}
             </tbody>
           </table>
+
           <div class="total">
-            <strong style="font-size:13px; color:#9f1239;">總金額：HK$${transaction.total}</strong><br>
+            小計：HK$${transaction.subtotal}<br>
+            ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
+            <strong style="font-size:12px;color:#4c1d95;">總金額：HK$${transaction.total}</strong><br>
             支付方式：${transaction.paymentMethod}
           </div>
-          <div style="margin-top:10px; font-size:9px; color:#555;">
-            ${companyInfo.terms}
-          </div>
+
+          <div class="thankyou">Thank you for your business!</div>
         </body>
       </html>
     `);
@@ -461,7 +473,7 @@ function App() {
     window.open(whatsappUrl, '_blank');
   };
 
-  // ==================== PDF 生成 ====================
+  // ==================== PDF 生成（優雅風格） ====================
   const generateReceiptPDF = async (transaction) => {
     const tempDiv = document.createElement('div');
     tempDiv.style.position = 'absolute';
@@ -515,133 +527,110 @@ function App() {
     document.body.removeChild(tempDiv);
   };
 
-const generateInvoicePDF = async (transaction) => {
-  const margin = 6;
-  const pageWidth = 148;
-  const contentWidth = pageWidth - (margin * 2);
+  const generateInvoicePDF = async (transaction) => {
+    const margin = 5;
+    const pageWidth = 148;
+    const contentWidth = pageWidth - (margin * 2);
 
-  const tempDiv = document.createElement('div');
-  tempDiv.style.position = 'absolute';
-  tempDiv.style.left = '-9999px';
-  tempDiv.style.width = `${contentWidth}mm`;
-  tempDiv.style.padding = '6mm';
-  tempDiv.style.background = '#ffffff';
-  tempDiv.style.border = '1px solid #d1d5db';
-  tempDiv.style.borderRadius = '4px';
-  tempDiv.style.fontFamily = 'Georgia, serif';
-  tempDiv.style.fontSize = '10px';
-  tempDiv.style.lineHeight = '1.5';
-  tempDiv.style.color = '#374151';
+    const tempDiv = document.createElement('div');
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.left = '-9999px';
+    tempDiv.style.width = `${contentWidth}mm`;
+    tempDiv.style.padding = '5mm';
+    tempDiv.style.background = '#ffffff';
+    tempDiv.style.border = '1px solid #d1d5db';
+    tempDiv.style.borderRadius = '3px';
+    tempDiv.style.fontFamily = 'Georgia, "Times New Roman", serif';
+    tempDiv.style.fontSize = '9.5px';
+    tempDiv.style.lineHeight = '1.45';
+    tempDiv.style.color = '#374151';
 
-  tempDiv.innerHTML = `
-    <div style="text-align:center; margin-bottom:8px">
-      <div style="width:70px; height:70px; background:#f3e8ff; border-radius:50%; margin:0 auto 8px; display:flex; align-items:center; justify-content:center; border:1px solid #c084fc;">
-        <img src="/logo.png" style="max-height:55px; max-width:55px;" />
+    tempDiv.innerHTML = `
+      <div style="text-align:center; margin-bottom:6px">
+        <div style="width:65px;height:65px;background:#f3e8ff;border-radius:50%;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;border:1px solid #c084fc;">
+          <img src="/logo.png" style="max-height:50px;max-width:50px;" />
+        </div>
+        <div style="font-size:20px;font-weight:700;letter-spacing:0.5px;color:#4c1d95;">INVOICE</div>
+        <div style="font-family:'Brush Script MT',cursive;font-size:12px;color:#6b7280;margin-top:1px;">麗明珠真髮中心</div>
       </div>
-      <div style="font-size:22px; font-weight:700; letter-spacing:1px; color:#4c1d95;">INVOICE</div>
-      <div style="font-family: 'Brush Script MT', cursive; font-size:13px; color:#6b7280; margin-top:2px;">麗明珠真髮中心</div>
-    </div>
 
-    <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:9.5px;">
-      <div>
-        <strong style="font-size:9px; color:#6b7280;">BILLED TO</strong><br>
-        ${transaction.customerName || '客戶'}<br>
-        ${transaction.customerPhone || ''}
+      <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:9.5px;">
+        <div>
+          <strong style="font-size:8.5px;color:#6b7280;">BILLED TO</strong><br>
+          ${transaction.customerName || '客戶'}<br>
+          ${transaction.customerPhone || ''}
+        </div>
+        <div style="text-align:right;">
+          <strong style="font-size:8.5px;color:#6b7280;">INVOICE NO</strong><br>
+          ${transaction.invoiceNumber}<br>
+          <strong style="font-size:8.5px;color:#6b7280;">DATE</strong><br>
+          ${transaction.date}
+        </div>
       </div>
-      <div style="text-align:right;">
-        <strong style="font-size:9px; color:#6b7280;">INVOICE NO</strong><br>
-        ${transaction.invoiceNumber}<br>
-        <strong style="font-size:9px; color:#6b7280;">DATE</strong><br>
-        ${transaction.date}
-      </div>
-    </div>
 
-    <table style="width:100%; border-collapse:collapse; margin-bottom:12px; font-size:9.5px;">
-      <thead>
-        <tr style="background:#f8fafc; border-bottom:1px solid #e5e7eb;">
-          <th style="padding:6px 8px; text-align:left; font-weight:600;">項目</th>
-          <th style="padding:6px 8px; text-align:center; width:10%;">數量</th>
-          <th style="padding:6px 8px; text-align:right; width:15%;">單價</th>
-          <th style="padding:6px 8px; text-align:right; width:15%;">小計</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${transaction.items.map(item => `
-          <tr style="border-bottom:1px solid #f1f5f9;">
-            <td style="padding:6px 8px;">${item.name}</td>
-            <td style="padding:6px 8px; text-align:center;">${item.qty}</td>
-            <td style="padding:6px 8px; text-align:right;">HK$${item.price}</td>
-            <td style="padding:6px 8px; text-align:right;">HK$${(item.price * item.qty).toFixed(0)}</td>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:10px;font-size:9px;">
+        <thead>
+          <tr style="background:#f8fafc;border-bottom:1px solid #e5e7eb;">
+            <th style="padding:5px 6px;text-align:left;font-weight:600;">項目</th>
+            <th style="padding:5px 6px;text-align:center;width:9%;">數量</th>
+            <th style="padding:5px 6px;text-align:right;width:14%;">單價</th>
+            <th style="padding:5px 6px;text-align:right;width:14%;">小計</th>
           </tr>
-          ${item.pickupDate ? `
-          <tr>
-            <td colspan="4" style="padding:3px 8px; font-size:8.5px; color:#c026d3;">→ 預計取貨日期：${item.pickupDate}</td>
-          </tr>` : ''}
-        `).join('')}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          ${transaction.items.map(item => `
+            <tr style="border-bottom:1px solid #f1f5f9;">
+              <td style="padding:5px 6px;">${item.name}</td>
+              <td style="padding:5px 6px;text-align:center;">${item.qty}</td>
+              <td style="padding:5px 6px;text-align:right;">HK$${item.price}</td>
+              <td style="padding:5px 6px;text-align:right;">HK$${(item.price * item.qty).toFixed(0)}</td>
+            </tr>
+            ${item.pickupDate ? `<tr><td colspan="4" style="padding:2px 6px;font-size:8px;color:#c026d3;">→ 預計取貨日期：${item.pickupDate}</td></tr>` : ''}
+          `).join('')}
+        </tbody>
+      </table>
 
-    <div style="text-align:right; font-size:10px; margin-bottom:12px;">
-      <div>小計：HK$${transaction.subtotal}</div>
-      ${transaction.discount > 0 ? `<div>折扣：-HK$${transaction.discount}</div>` : ''}
-      <div style="font-size:13px; font-weight:700; color:#4c1d95; margin-top:4px;">總金額：HK$${transaction.total}</div>
-      <div style="font-size:9px; margin-top:2px;">支付方式：${transaction.paymentMethod}</div>
-    </div>
+      <div style="text-align:right;font-size:9.5px;margin-bottom:10px;">
+        小計：HK$${transaction.subtotal}<br>
+        ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
+        <span style="font-size:12px;font-weight:700;color:#4c1d95;">總金額：HK$${transaction.total}</span><br>
+        <span style="font-size:8.5px;">支付方式：${transaction.paymentMethod}</span>
+      </div>
 
-    <div style="text-align:right; font-size:11px; color:#6b7280; margin-top:10px;">
-      Thank you for your business!
-    </div>
-  `;
+      <div style="text-align:right;font-size:10.5px;color:#6b7280;margin-top:8px;">
+        Thank you for your business!
+      </div>
+    `;
 
-  document.body.appendChild(tempDiv);
+    document.body.appendChild(tempDiv);
 
-  const canvas = await html2canvas(tempDiv, { scale: 3.5, backgroundColor: '#ffffff' });
-  const imgData = canvas.toDataURL('image/png');
+    const canvas = await html2canvas(tempDiv, { scale: 3.5, backgroundColor: '#ffffff' });
+    const imgData = canvas.toDataURL('image/png');
 
-  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [148, 210] });
-  const pdfWidth = pdf.internal.pageSize.getWidth();
-  const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-  pdf.addImage(imgData, 'PNG', margin, margin, pdfWidth - (margin * 2), pdfHeight);
-  pdf.save(`Invoice_${transaction.invoiceNumber}_A5.pdf`);
-
-  document.body.removeChild(tempDiv);
-};
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [148, 210] });
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-    const x = margin;
-    const y = margin;
-
-    pdf.addImage(imgData, 'PNG', x, y, pdfWidth - (margin * 2), pdfHeight);
+    pdf.addImage(imgData, 'PNG', margin, margin, pdfWidth - (margin * 2), pdfHeight);
     pdf.save(`Invoice_${transaction.invoiceNumber}_A5.pdf`);
 
     document.body.removeChild(tempDiv);
   };
 
-  // ==================== 匯出 Excel 功能 ====================
+  // ==================== 匯出 Excel ====================
   const exportToExcel = () => {
     let filteredTransactions = [...transactions];
 
-    // 日期篩選
-    if (startDate) {
-      filteredTransactions = filteredTransactions.filter(tx => tx.date >= startDate);
-    }
-    if (endDate) {
-      filteredTransactions = filteredTransactions.filter(tx => tx.date <= endDate);
-    }
+    if (startDate) filteredTransactions = filteredTransactions.filter(tx => tx.date >= startDate);
+    if (endDate) filteredTransactions = filteredTransactions.filter(tx => tx.date <= endDate);
 
     if (filteredTransactions.length === 0) {
       showToast('沒有符合條件的訂單', 'error');
       return;
     }
 
-    // 準備資料
     const data = filteredTransactions.map(tx => {
-      const itemsText = tx.items
-        .map(item => `${item.name} x${item.qty}`)
-        .join(', ');
-
+      const itemsText = tx.items.map(item => `${item.name} x${item.qty}`).join(', ');
       return {
         '日期': tx.date,
         '發票編號': tx.invoiceNumber,
@@ -655,17 +644,11 @@ const generateInvoicePDF = async (transaction) => {
       };
     });
 
-    // 建立工作表
     const ws = XLSX.utils.json_to_sheet(data);
-
-    // 建立工作簿
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "發票總表");
 
-    // 設定檔名
     const fileName = `發票總表_${startDate || '全部'}_至_${endDate || '全部'}.xlsx`;
-
-    // 下載
     XLSX.writeFile(wb, fileName);
     showToast(`已成功匯出 ${filteredTransactions.length} 筆訂單`, 'success');
   };
@@ -732,8 +715,7 @@ const generateInvoicePDF = async (transaction) => {
                   {item.pickupDate && (
                     <div className="mt-2">
                       <div className="text-xs text-amber-600 mb-1">預計取貨日期</div>
-                      <input type="date" value={item.pickupDate} onChange={e => updatePickupDate(item.id, e.target.value)}
-                        className="w-full text-xs border rounded px-2 py-1" />
+                      <input type="date" value={item.pickupDate} onChange={e => updatePickupDate(item.id, e.target.value)} className="w-full text-xs border rounded px-2 py-1" />
                     </div>
                   )}
                   <div className="flex gap-2 mt-2">
@@ -795,15 +777,12 @@ const generateInvoicePDF = async (transaction) => {
           </div>
         )}
 
-        {/* 訂單記錄頁面（已優化 + 匯出功能） */}
+        {/* 訂單記錄頁面 */}
         {activeTab === 'reports' && (
           <div>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-semibold tracking-tight">訂單記錄</h2>
-              <button 
-                onClick={exportToExcel}
-                className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-medium"
-              >
+              <button onClick={exportToExcel} className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-medium">
                 <FileDown className="w-4 h-4" /> 匯出 Excel
               </button>
             </div>
@@ -812,28 +791,13 @@ const generateInvoicePDF = async (transaction) => {
             <div className="bg-white rounded-2xl border p-4 mb-6 flex flex-wrap gap-4 items-end">
               <div>
                 <label className="text-sm font-medium text-slate-600 block mb-1">開始日期</label>
-                <input 
-                  type="date" 
-                  value={startDate} 
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="border rounded-xl px-3 py-2 text-sm"
-                />
+                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="border rounded-xl px-3 py-2 text-sm" />
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-600 block mb-1">結束日期</label>
-                <input 
-                  type="date" 
-                  value={endDate} 
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="border rounded-xl px-3 py-2 text-sm"
-                />
+                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="border rounded-xl px-3 py-2 text-sm" />
               </div>
-              <button 
-                onClick={() => { setStartDate(''); setEndDate(''); }}
-                className="px-4 py-2 text-sm border rounded-xl hover:bg-slate-50"
-              >
-                清除篩選
-              </button>
+              <button onClick={() => { setStartDate(''); setEndDate(''); }} className="px-4 py-2 text-sm border rounded-xl hover:bg-slate-50">清除篩選</button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
@@ -913,8 +877,7 @@ const generateInvoicePDF = async (transaction) => {
             <div className="mb-4">
               <div className="relative">
                 <Search className="absolute left-4 top-3.5 w-4 h-4 text-slate-400" />
-                <input type="text" placeholder="搜尋客戶姓名或電話..." value={customerSearchTerm} onChange={(e) => setCustomerSearchTerm(e.target.value)}
-                  className="w-full pl-11 py-3 border border-slate-200 rounded-2xl focus:border-rose-400" />
+                <input type="text" placeholder="搜尋客戶姓名或電話..." value={customerSearchTerm} onChange={(e) => setCustomerSearchTerm(e.target.value)} className="w-full pl-11 py-3 border border-slate-200 rounded-2xl focus:border-rose-400" />
               </div>
             </div>
 
@@ -987,89 +950,45 @@ const generateInvoicePDF = async (transaction) => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setIsAddItemModalOpen(false)}>
           <div className="bg-white rounded-3xl p-8 w-full max-w-md" onClick={e => e.stopPropagation()}>
             <h2 className="text-2xl font-bold mb-6">添加商品 / 服務</h2>
-
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-slate-600">名稱</label>
-                <input 
-                  type="text" 
-                  value={newItem.name} 
-                  onChange={e => setNewItem({...newItem, name: e.target.value})} 
-                  className="w-full border p-3 rounded-xl mt-1" 
-                  placeholder="例如：短直真髮假髮" 
-                />
+                <input type="text" value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} className="w-full border p-3 rounded-xl mt-1" placeholder="例如：短直真髮假髮" />
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-slate-600">類型</label>
-                  <select 
-                    value={newItem.type} 
-                    onChange={e => setNewItem({...newItem, type: e.target.value})} 
-                    className="w-full border p-3 rounded-xl mt-1"
-                  >
+                  <select value={newItem.type} onChange={e => setNewItem({...newItem, type: e.target.value})} className="w-full border p-3 rounded-xl mt-1">
                     <option value="product">商品</option>
                     <option value="service">服務</option>
                   </select>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-slate-600">價格</label>
-                  <input 
-                    type="number" 
-                    value={newItem.price} 
-                    onChange={e => setNewItem({...newItem, price: e.target.value})} 
-                    className="w-full border p-3 rounded-xl mt-1" 
-                    placeholder="1280" 
-                  />
+                  <input type="number" value={newItem.price} onChange={e => setNewItem({...newItem, price: e.target.value})} className="w-full border p-3 rounded-xl mt-1" placeholder="1280" />
                 </div>
               </div>
-
               <div>
                 <label className="text-sm font-medium text-slate-600">類別</label>
-                <input 
-                  type="text" 
-                  value={newItem.category} 
-                  onChange={e => setNewItem({...newItem, category: e.target.value})} 
-                  className="w-full border p-3 rounded-xl mt-1" 
-                  placeholder="假髮 / 洗護服務" 
-                />
+                <input type="text" value={newItem.category} onChange={e => setNewItem({...newItem, category: e.target.value})} className="w-full border p-3 rounded-xl mt-1" placeholder="假髮 / 洗護服務" />
               </div>
-
               {newItem.type === 'product' && (
                 <div>
                   <label className="text-sm font-medium text-slate-600">初始庫存</label>
-                  <input 
-                    type="number" 
-                    value={newItem.stock} 
-                    onChange={e => setNewItem({...newItem, stock: e.target.value})} 
-                    className="w-full border p-3 rounded-xl mt-1" 
-                    placeholder="10" 
-                  />
+                  <input type="number" value={newItem.stock} onChange={e => setNewItem({...newItem, stock: e.target.value})} className="w-full border p-3 rounded-xl mt-1" placeholder="10" />
                 </div>
               )}
-
               <div className="flex items-center gap-3 pt-2">
-                <input 
-                  type="checkbox" 
-                  checked={newItem.requiresProcessing} 
-                  onChange={e => setNewItem({...newItem, requiresProcessing: e.target.checked})} 
-                />
+                <input type="checkbox" checked={newItem.requiresProcessing} onChange={e => setNewItem({...newItem, requiresProcessing: e.target.checked})} />
                 <span className="text-sm">需要加工</span>
               </div>
-
               {newItem.requiresProcessing && (
                 <div>
                   <label className="text-sm font-medium text-slate-600">加工天數</label>
-                  <input 
-                    type="number" 
-                    value={newItem.defaultProcessingDays} 
-                    onChange={e => setNewItem({...newItem, defaultProcessingDays: e.target.value})} 
-                    className="w-full border p-3 rounded-xl mt-1" 
-                  />
+                  <input type="number" value={newItem.defaultProcessingDays} onChange={e => setNewItem({...newItem, defaultProcessingDays: e.target.value})} className="w-full border p-3 rounded-xl mt-1" />
                 </div>
               )}
             </div>
-
             <div className="flex gap-3 mt-8">
               <button onClick={() => setIsAddItemModalOpen(false)} className="flex-1 py-3 border rounded-xl">取消</button>
               <button onClick={handleAddItem} className="flex-1 py-3 bg-rose-600 text-white rounded-xl">確認新增</button>
@@ -1084,22 +1003,10 @@ const generateInvoicePDF = async (transaction) => {
           <div className="bg-white rounded-3xl p-8 w-full max-w-md" onClick={e => e.stopPropagation()}>
             <h2 className="text-2xl font-bold mb-4">確認付款</h2>
             <p className="text-4xl font-bold mb-6">HK${total}</p>
-
             <div className="mb-6">
               <label className="text-sm font-medium text-slate-600 block mb-2">所屬客戶（選填）</label>
               <div className="relative">
-                <input
-                  type="text"
-                  value={customerSearchTerm}
-                  onChange={(e) => {
-                    setCustomerSearchTerm(e.target.value);
-                    setSelectedCustomerForCheckout(null);
-                    setShowCustomerSuggestions(true);
-                  }}
-                  onFocus={() => setShowCustomerSuggestions(true)}
-                  placeholder="輸入客戶姓名或電話..."
-                  className="w-full border p-3 rounded-xl focus:border-rose-400"
-                />
+                <input type="text" value={customerSearchTerm} onChange={(e) => { setCustomerSearchTerm(e.target.value); setSelectedCustomerForCheckout(null); setShowCustomerSuggestions(true); }} onFocus={() => setShowCustomerSuggestions(true)} placeholder="輸入客戶姓名或電話..." className="w-full border p-3 rounded-xl focus:border-rose-400" />
                 {showCustomerSuggestions && customerSuggestions.length > 0 && (
                   <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-2xl shadow-lg max-h-48 overflow-auto">
                     {customerSuggestions.map((customer, index) => (
@@ -1111,25 +1018,14 @@ const generateInvoicePDF = async (transaction) => {
                   </div>
                 )}
               </div>
-              {selectedCustomerForCheckout && (
-                <div className="mt-2 text-sm text-emerald-600">
-                  已選擇：{selectedCustomerForCheckout.name} {selectedCustomerForCheckout.phone && `(${selectedCustomerForCheckout.phone})`}
-                </div>
-              )}
+              {selectedCustomerForCheckout && <div className="mt-2 text-sm text-emerald-600">已選擇：{selectedCustomerForCheckout.name} {selectedCustomerForCheckout.phone && `(${selectedCustomerForCheckout.phone})`}</div>}
             </div>
-
             <div className="grid grid-cols-2 gap-3 mb-6">
               {paymentMethods.map(m => (
-                <button key={m.id} onClick={() => setSelectedPayment(m.id)} className={`p-4 border rounded-2xl ${selectedPayment === m.id ? 'border-rose-600 bg-rose-50' : ''}`}>
-                  {m.label}
-                </button>
+                <button key={m.id} onClick={() => setSelectedPayment(m.id)} className={`p-4 border rounded-2xl ${selectedPayment === m.id ? 'border-rose-600 bg-rose-50' : ''}`}>{m.label}</button>
               ))}
             </div>
-
-            {selectedPayment === 'cash' && (
-              <input type="number" value={paidAmount} onChange={e => setPaidAmount(e.target.value)} className="w-full border p-3 rounded-xl mb-4 text-2xl" placeholder="支付金額" />
-            )}
-
+            {selectedPayment === 'cash' && <input type="number" value={paidAmount} onChange={e => setPaidAmount(e.target.value)} className="w-full border p-3 rounded-xl mb-4 text-2xl" placeholder="支付金額" />}
             <div className="flex gap-3">
               <button onClick={closePaymentModal} className="flex-1 py-3 border rounded-xl">取消</button>
               <button onClick={processCheckout} className="flex-1 py-3 bg-rose-600 text-white rounded-xl">確認交易</button>
@@ -1146,19 +1042,11 @@ const generateInvoicePDF = async (transaction) => {
               <CheckCircle className="w-16 h-16 text-emerald-500 mx-auto mb-3" />
               <h2 className="text-2xl font-bold">交易成功！</h2>
             </div>
-
             <div className="flex flex-col gap-3">
-              <button onClick={() => printReceipt(lastTransaction)} className="flex-1 bg-slate-100 py-3 rounded-xl font-semibold flex items-center justify-center gap-2">
-                編印 Receipt
-              </button>
-              <button onClick={() => printInvoice(lastTransaction)} className="flex-1 bg-rose-600 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-rose-700">
-                編印 Invoice
-              </button>
-              <button onClick={() => sendToWhatsApp(lastTransaction)} className="flex-1 bg-green-600 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-green-700">
-                <Send className="w-5 h-5" /> 發送至客戶 WhatsApp
-              </button>
+              <button onClick={() => printReceipt(lastTransaction)} className="flex-1 bg-slate-100 py-3 rounded-xl font-semibold flex items-center justify-center gap-2">編印 Receipt</button>
+              <button onClick={() => printInvoice(lastTransaction)} className="flex-1 bg-rose-600 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-rose-700">編印 Invoice</button>
+              <button onClick={() => sendToWhatsApp(lastTransaction)} className="flex-1 bg-green-600 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-green-700"><Send className="w-5 h-5" /> 發送至客戶 WhatsApp</button>
             </div>
-
             <button onClick={closeSuccessModal} className="mt-6 w-full py-3 border rounded-xl">關閉</button>
           </div>
         </div>

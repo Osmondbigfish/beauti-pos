@@ -401,7 +401,7 @@ function App() {
       </head>
       <body>
         <div class="header">
-          <img src="/logo.png" style="height:72px; margin-bottom:6px;" />
+          <img src="/logo.png" style="height:145px; margin-bottom:6px;" />
           <div style="font-size:19px; font-weight:700; color:#4c1d95;">INVOICE</div>
           <div style="font-size:11.5px; color:#6b7280;">麗明珠真髮中心</div>
         </div>
@@ -544,7 +544,7 @@ function App() {
 
   tempDiv.innerHTML = `
     <div style="text-align:center; margin-bottom:6px">
-      <img src="/logo.png" style="height:78px; margin-bottom:6px; display:block; margin-left:auto; margin-right:auto;" />
+      <img src="/logo.png" style="height:155px; margin-bottom:6px; display:block; margin-left:auto; margin-right:auto;" />
       <div style="font-size:19px; font-weight:700; color:#4c1d95;">INVOICE</div>
       <div style="font-size:11.5px; color:#6b7280; margin-top:1px;">麗明珠真髮中心</div>
     </div>

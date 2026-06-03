@@ -390,32 +390,32 @@ function App() {
         <title>Invoice - ${transaction.invoiceNumber}</title>
         <style>
           @media print { @page { size: A5 portrait; margin: 6mm; } }
-          body { font-family: "Noto Sans TC", "PingFang TC", system-ui, sans-serif; padding: 8mm; line-height: 1.5; font-size: 10px; color: #374151; }
+          body { font-family: "Noto Sans TC", "PingFang TC", system-ui, sans-serif; padding: 8mm; line-height: 1.55; font-size: 11px; color: #374151; }
           .header { text-align: center; margin-bottom: 8px; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9.5px; }
-          th, td { padding: 5px 6px; border-bottom: 1px solid #f1f5f9; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 10.5px; }
+          th, td { padding: 7px 8px; border-bottom: 1px solid #f1f5f9; }
           th { background: #f8fafc; font-weight: 600; }
-          .total { text-align: right; font-size: 10px; }
-          .thankyou { text-align: right; font-size: 11px; color: #6b7280; margin-top: 10px; }
+          .total { text-align: right; font-size: 11px; }
+          .thankyou { text-align: right; font-size: 12px; color: #6b7280; margin-top: 10px; }
         </style>
       </head>
       <body>
         <div class="header">
-          <img src="/logo.png" style="height:145px; margin-bottom:6px;" />
-          <div style="font-size:19px; font-weight:700; color:#4c1d95;">INVOICE</div>
-          <div style="font-size:11.5px; color:#6b7280;">麗明珠真髮中心</div>
+          <img src="/logo.png" style="height:145px; margin-bottom:8px;" />
+          <div style="font-size:22px; font-weight:700; color:#4c1d95;">INVOICE</div>
+          <div style="font-size:13px; color:#6b7280;">麗明珠真髮中心</div>
         </div>
 
-        <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:9.5px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:10.5px;">
           <div>
-            <strong style="font-size:8.5px; color:#6b7280;">BILLED TO</strong><br>
+            <strong style="font-size:9.5px; color:#6b7280;">BILLED TO</strong><br>
             ${transaction.customerName || '客戶'}<br>
             ${transaction.customerPhone || ''}
           </div>
           <div style="text-align:right;">
-            <strong style="font-size:8.5px; color:#6b7280;">INVOICE NO</strong><br>
+            <strong style="font-size:9.5px; color:#6b7280;">INVOICE NO</strong><br>
             ${transaction.invoiceNumber}<br>
-            <strong style="font-size:8.5px; color:#6b7280;">DATE</strong><br>
+            <strong style="font-size:9.5px; color:#6b7280;">DATE</strong><br>
             ${transaction.date}
           </div>
         </div>
@@ -437,7 +437,7 @@ function App() {
                 <td style="text-align:right;">HK$${item.price}</td>
                 <td style="text-align:right;">HK$${(item.price * item.qty).toFixed(0)}</td>
               </tr>
-              ${item.pickupDate ? `<tr><td colspan="4" style="color:#c026d3; font-size:8.5px;">→ 預計取貨日期：${item.pickupDate}</td></tr>` : ''}
+              ${item.pickupDate ? `<tr><td colspan="4" style="color:#c026d3; font-size:9.5px;">→ 預計取貨日期：${item.pickupDate}</td></tr>` : ''}
             `).join('')}
           </tbody>
         </table>
@@ -445,7 +445,7 @@ function App() {
         <div class="total">
           小計：HK$${transaction.subtotal}<br>
           ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
-          <strong style="font-size:12px; color:#4c1d95;">總金額：HK$${transaction.total}</strong><br>
+          <strong style="font-size:14px; color:#4c1d95;">總金額：HK$${transaction.total}</strong><br>
           支付方式：${transaction.paymentMethod}
         </div>
 
@@ -533,66 +533,66 @@ function App() {
   tempDiv.style.position = 'absolute';
   tempDiv.style.left = '-9999px';
   tempDiv.style.width = `${contentWidth}mm`;
-  tempDiv.style.padding = '5mm';
+  tempDiv.style.padding = '6mm';
   tempDiv.style.background = '#ffffff';
   tempDiv.style.border = '1px solid #d1d5db';
   tempDiv.style.borderRadius = '3px';
   tempDiv.style.fontFamily = '"Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif';
-  tempDiv.style.fontSize = '9.5px';
-  tempDiv.style.lineHeight = '1.45';
+  tempDiv.style.fontSize = '11px';           // ← 放大
+  tempDiv.style.lineHeight = '1.5';
   tempDiv.style.color = '#374151';
 
   tempDiv.innerHTML = `
-    <div style="text-align:center; margin-bottom:6px">
-      <img src="/logo.png" style="height:155px; margin-bottom:6px; display:block; margin-left:auto; margin-right:auto;" />
-      <div style="font-size:19px; font-weight:700; color:#4c1d95;">INVOICE</div>
-      <div style="font-size:11.5px; color:#6b7280; margin-top:1px;">麗明珠真髮中心</div>
+    <div style="text-align:center; margin-bottom:8px">
+      <img src="/logo.png" style="height:155px; margin-bottom:8px; display:block; margin-left:auto; margin-right:auto;" />
+      <div style="font-size:22px; font-weight:700; color:#4c1d95;">INVOICE</div>
+      <div style="font-size:13px; color:#6b7280; margin-top:2px;">麗明珠真髮中心</div>
     </div>
 
-    <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:9.5px;">
+    <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:10.5px;">
       <div>
-        <strong style="font-size:8.5px; color:#6b7280;">BILLED TO</strong><br>
+        <strong style="font-size:9.5px; color:#6b7280;">BILLED TO</strong><br>
         ${transaction.customerName || '客戶'}<br>
         ${transaction.customerPhone || ''}
       </div>
       <div style="text-align:right;">
-        <strong style="font-size:8.5px; color:#6b7280;">INVOICE NO</strong><br>
+        <strong style="font-size:9.5px; color:#6b7280;">INVOICE NO</strong><br>
         ${transaction.invoiceNumber}<br>
-        <strong style="font-size:8.5px; color:#6b7280;">DATE</strong><br>
+        <strong style="font-size:9.5px; color:#6b7280;">DATE</strong><br>
         ${transaction.date}
       </div>
     </div>
 
-    <table style="width:100%; border-collapse:collapse; margin-bottom:10px; font-size:9px;">
+    <table style="width:100%; border-collapse:collapse; margin-bottom:12px; font-size:10.5px;">
       <thead>
         <tr style="background:#f8fafc; border-bottom:1px solid #e5e7eb;">
-          <th style="padding:5px 6px; text-align:left; font-weight:600;">項目</th>
-          <th style="padding:5px 6px; text-align:center; width:9%;">數量</th>
-          <th style="padding:5px 6px; text-align:right; width:14%;">單價</th>
-          <th style="padding:5px 6px; text-align:right; width:14%;">小計</th>
+          <th style="padding:7px 8px; text-align:left; font-weight:600;">項目</th>
+          <th style="padding:7px 8px; text-align:center; width:9%;">數量</th>
+          <th style="padding:7px 8px; text-align:right; width:14%;">單價</th>
+          <th style="padding:7px 8px; text-align:right; width:14%;">小計</th>
         </tr>
       </thead>
       <tbody>
         ${transaction.items.map(item => `
           <tr style="border-bottom:1px solid #f1f5f9;">
-            <td style="padding:5px 6px;">${item.name}</td>
-            <td style="padding:5px 6px; text-align:center;">${item.qty}</td>
-            <td style="padding:5px 6px; text-align:right;">HK$${item.price}</td>
-            <td style="padding:5px 6px; text-align:right;">HK$${(item.price * item.qty).toFixed(0)}</td>
+            <td style="padding:7px 8px;">${item.name}</td>
+            <td style="padding:7px 8px; text-align:center;">${item.qty}</td>
+            <td style="padding:7px 8px; text-align:right;">HK$${item.price}</td>
+            <td style="padding:7px 8px; text-align:right;">HK$${(item.price * item.qty).toFixed(0)}</td>
           </tr>
-          ${item.pickupDate ? `<tr><td colspan="4" style="padding:2px 6px; font-size:8px; color:#c026d3;">→ 預計取貨日期：${item.pickupDate}</td></tr>` : ''}
+          ${item.pickupDate ? `<tr><td colspan="4" style="padding:3px 8px; font-size:9.5px; color:#c026d3;">→ 預計取貨日期：${item.pickupDate}</td></tr>` : ''}
         `).join('')}
       </tbody>
     </table>
 
-    <div style="text-align:right; font-size:9.5px; margin-bottom:10px;">
+    <div style="text-align:right; font-size:11px; margin-bottom:12px;">
       小計：HK$${transaction.subtotal}<br>
       ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
-      <span style="font-size:12px; font-weight:700; color:#4c1d95;">總金額：HK$${transaction.total}</span><br>
-      <span style="font-size:8.5px;">支付方式：${transaction.paymentMethod}</span>
+      <span style="font-size:14px; font-weight:700; color:#4c1d95;">總金額：HK$${transaction.total}</span><br>
+      <span style="font-size:10px;">支付方式：${transaction.paymentMethod}</span>
     </div>
 
-    <div style="text-align:right; font-size:10.5px; color:#6b7280; margin-top:8px;">
+    <div style="text-align:right; font-size:12px; color:#6b7280; margin-top:10px;">
       Thank you for your business!
     </div>
   `;

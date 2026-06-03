@@ -380,85 +380,82 @@ function App() {
   };
 
   const printInvoice = (transaction) => {
-    if (!transaction) return;
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return alert('請允許彈出視窗使用列印功能');
+  if (!transaction) return;
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) return alert('請允許彈出視窗使用列印功能');
 
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Invoice - ${transaction.invoiceNumber}</title>
-          <style>
-            @media print { @page { size: A5 portrait; margin: 6mm; } }
-            body { font-family: Georgia, "Times New Roman", serif; padding: 8mm; line-height: 1.5; font-size: 10px; color: #374151; }
-            .header { text-align: center; margin-bottom: 8px; }
-            .logo-circle { width: 65px; height: 65px; background: #f3e8ff; border-radius: 50%; margin: 0 auto 6px; display: flex; align-items: center; justify-content: center; border: 1px solid #c084fc; }
-            table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9.5px; }
-            th, td { padding: 5px 6px; border-bottom: 1px solid #f1f5f9; }
-            th { background: #f8fafc; font-weight: 600; }
-            .total { text-align: right; font-size: 10px; }
-            .thankyou { text-align: right; font-size: 11px; color: #6b7280; margin-top: 10px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div class="logo-circle">
-              <img src="/logo.png" style="max-height:48px;max-width:48px;" />
-            </div>
-            <div style="font-size:20px;font-weight:700;color:#4c1d95;">INVOICE</div>
-            <div style="font-family:'Brush Script MT',cursive;font-size:12px;color:#6b7280;">麗明珠真髮中心</div>
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Invoice - ${transaction.invoiceNumber}</title>
+        <style>
+          @media print { @page { size: A5 portrait; margin: 6mm; } }
+          body { font-family: "Noto Sans TC", "PingFang TC", system-ui, sans-serif; padding: 8mm; line-height: 1.5; font-size: 10px; color: #374151; }
+          .header { text-align: center; margin-bottom: 8px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9.5px; }
+          th, td { padding: 5px 6px; border-bottom: 1px solid #f1f5f9; }
+          th { background: #f8fafc; font-weight: 600; }
+          .total { text-align: right; font-size: 10px; }
+          .thankyou { text-align: right; font-size: 11px; color: #6b7280; margin-top: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <img src="/logo.png" style="height:72px; margin-bottom:6px;" />
+          <div style="font-size:19px; font-weight:700; color:#4c1d95;">INVOICE</div>
+          <div style="font-size:11.5px; color:#6b7280;">麗明珠真髮中心</div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:9.5px;">
+          <div>
+            <strong style="font-size:8.5px; color:#6b7280;">BILLED TO</strong><br>
+            ${transaction.customerName || '客戶'}<br>
+            ${transaction.customerPhone || ''}
           </div>
-
-          <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:9.5px;">
-            <div>
-              <strong style="font-size:8.5px;color:#6b7280;">BILLED TO</strong><br>
-              ${transaction.customerName || '客戶'}<br>
-              ${transaction.customerPhone || ''}
-            </div>
-            <div style="text-align:right;">
-              <strong style="font-size:8.5px;color:#6b7280;">INVOICE NO</strong><br>
-              ${transaction.invoiceNumber}<br>
-              <strong style="font-size:8.5px;color:#6b7280;">DATE</strong><br>
-              ${transaction.date}
-            </div>
+          <div style="text-align:right;">
+            <strong style="font-size:8.5px; color:#6b7280;">INVOICE NO</strong><br>
+            ${transaction.invoiceNumber}<br>
+            <strong style="font-size:8.5px; color:#6b7280;">DATE</strong><br>
+            ${transaction.date}
           </div>
+        </div>
 
-          <table>
-            <thead>
+        <table>
+          <thead>
+            <tr>
+              <th style="text-align:left;">項目</th>
+              <th style="text-align:center;">數量</th>
+              <th style="text-align:right;">單價</th>
+              <th style="text-align:right;">小計</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${transaction.items.map(item => `
               <tr>
-                <th style="text-align:left;">項目</th>
-                <th style="text-align:center;">數量</th>
-                <th style="text-align:right;">單價</th>
-                <th style="text-align:right;">小計</th>
+                <td>${item.name}</td>
+                <td style="text-align:center;">${item.qty}</td>
+                <td style="text-align:right;">HK$${item.price}</td>
+                <td style="text-align:right;">HK$${(item.price * item.qty).toFixed(0)}</td>
               </tr>
-            </thead>
-            <tbody>
-              ${transaction.items.map(item => `
-                <tr>
-                  <td>${item.name}</td>
-                  <td style="text-align:center;">${item.qty}</td>
-                  <td style="text-align:right;">HK$${item.price}</td>
-                  <td style="text-align:right;">HK$${(item.price * item.qty).toFixed(0)}</td>
-                </tr>
-                ${item.pickupDate ? `<tr><td colspan="4" style="color:#c026d3;font-size:8.5px;">→ 預計取貨日期：${item.pickupDate}</td></tr>` : ''}
-              `).join('')}
-            </tbody>
-          </table>
+              ${item.pickupDate ? `<tr><td colspan="4" style="color:#c026d3; font-size:8.5px;">→ 預計取貨日期：${item.pickupDate}</td></tr>` : ''}
+            `).join('')}
+          </tbody>
+        </table>
 
-          <div class="total">
-            小計：HK$${transaction.subtotal}<br>
-            ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
-            <strong style="font-size:12px;color:#4c1d95;">總金額：HK$${transaction.total}</strong><br>
-            支付方式：${transaction.paymentMethod}
-          </div>
+        <div class="total">
+          小計：HK$${transaction.subtotal}<br>
+          ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
+          <strong style="font-size:12px; color:#4c1d95;">總金額：HK$${transaction.total}</strong><br>
+          支付方式：${transaction.paymentMethod}
+        </div>
 
-          <div class="thankyou">Thank you for your business!</div>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    setTimeout(() => printWindow.print(), 300);
-  };
+        <div class="thankyou">Thank you for your business!</div>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  setTimeout(() => printWindow.print(), 300);
+};
 
   // ==================== WhatsApp 發送功能 ====================
   const sendToWhatsApp = (transaction) => {
@@ -527,95 +524,93 @@ function App() {
     document.body.removeChild(tempDiv);
   };
 
-  const generateInvoicePDF = async (transaction) => {
-    const margin = 5;
-    const pageWidth = 148;
-    const contentWidth = pageWidth - (margin * 2);
+ const generateInvoicePDF = async (transaction) => {
+  const margin = 5;
+  const pageWidth = 148;
+  const contentWidth = pageWidth - (margin * 2);
 
-    const tempDiv = document.createElement('div');
-    tempDiv.style.position = 'absolute';
-    tempDiv.style.left = '-9999px';
-    tempDiv.style.width = `${contentWidth}mm`;
-    tempDiv.style.padding = '5mm';
-    tempDiv.style.background = '#ffffff';
-    tempDiv.style.border = '1px solid #d1d5db';
-    tempDiv.style.borderRadius = '3px';
-    tempDiv.style.fontFamily = 'Georgia, "Times New Roman", serif';
-    tempDiv.style.fontSize = '9.5px';
-    tempDiv.style.lineHeight = '1.45';
-    tempDiv.style.color = '#374151';
+  const tempDiv = document.createElement('div');
+  tempDiv.style.position = 'absolute';
+  tempDiv.style.left = '-9999px';
+  tempDiv.style.width = `${contentWidth}mm`;
+  tempDiv.style.padding = '5mm';
+  tempDiv.style.background = '#ffffff';
+  tempDiv.style.border = '1px solid #d1d5db';
+  tempDiv.style.borderRadius = '3px';
+  tempDiv.style.fontFamily = '"Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif';
+  tempDiv.style.fontSize = '9.5px';
+  tempDiv.style.lineHeight = '1.45';
+  tempDiv.style.color = '#374151';
 
-    tempDiv.innerHTML = `
-      <div style="text-align:center; margin-bottom:6px">
-        <div style="width:65px;height:65px;background:#f3e8ff;border-radius:50%;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;border:1px solid #c084fc;">
-          <img src="/logo.png" style="max-height:50px;max-width:50px;" />
-        </div>
-        <div style="font-size:20px;font-weight:700;letter-spacing:0.5px;color:#4c1d95;">INVOICE</div>
-        <div style="font-family:'Brush Script MT',cursive;font-size:12px;color:#6b7280;margin-top:1px;">麗明珠真髮中心</div>
+  tempDiv.innerHTML = `
+    <div style="text-align:center; margin-bottom:6px">
+      <img src="/logo.png" style="height:78px; margin-bottom:6px; display:block; margin-left:auto; margin-right:auto;" />
+      <div style="font-size:19px; font-weight:700; color:#4c1d95;">INVOICE</div>
+      <div style="font-size:11.5px; color:#6b7280; margin-top:1px;">麗明珠真髮中心</div>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:9.5px;">
+      <div>
+        <strong style="font-size:8.5px; color:#6b7280;">BILLED TO</strong><br>
+        ${transaction.customerName || '客戶'}<br>
+        ${transaction.customerPhone || ''}
       </div>
-
-      <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:9.5px;">
-        <div>
-          <strong style="font-size:8.5px;color:#6b7280;">BILLED TO</strong><br>
-          ${transaction.customerName || '客戶'}<br>
-          ${transaction.customerPhone || ''}
-        </div>
-        <div style="text-align:right;">
-          <strong style="font-size:8.5px;color:#6b7280;">INVOICE NO</strong><br>
-          ${transaction.invoiceNumber}<br>
-          <strong style="font-size:8.5px;color:#6b7280;">DATE</strong><br>
-          ${transaction.date}
-        </div>
+      <div style="text-align:right;">
+        <strong style="font-size:8.5px; color:#6b7280;">INVOICE NO</strong><br>
+        ${transaction.invoiceNumber}<br>
+        <strong style="font-size:8.5px; color:#6b7280;">DATE</strong><br>
+        ${transaction.date}
       </div>
+    </div>
 
-      <table style="width:100%;border-collapse:collapse;margin-bottom:10px;font-size:9px;">
-        <thead>
-          <tr style="background:#f8fafc;border-bottom:1px solid #e5e7eb;">
-            <th style="padding:5px 6px;text-align:left;font-weight:600;">項目</th>
-            <th style="padding:5px 6px;text-align:center;width:9%;">數量</th>
-            <th style="padding:5px 6px;text-align:right;width:14%;">單價</th>
-            <th style="padding:5px 6px;text-align:right;width:14%;">小計</th>
+    <table style="width:100%; border-collapse:collapse; margin-bottom:10px; font-size:9px;">
+      <thead>
+        <tr style="background:#f8fafc; border-bottom:1px solid #e5e7eb;">
+          <th style="padding:5px 6px; text-align:left; font-weight:600;">項目</th>
+          <th style="padding:5px 6px; text-align:center; width:9%;">數量</th>
+          <th style="padding:5px 6px; text-align:right; width:14%;">單價</th>
+          <th style="padding:5px 6px; text-align:right; width:14%;">小計</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${transaction.items.map(item => `
+          <tr style="border-bottom:1px solid #f1f5f9;">
+            <td style="padding:5px 6px;">${item.name}</td>
+            <td style="padding:5px 6px; text-align:center;">${item.qty}</td>
+            <td style="padding:5px 6px; text-align:right;">HK$${item.price}</td>
+            <td style="padding:5px 6px; text-align:right;">HK$${(item.price * item.qty).toFixed(0)}</td>
           </tr>
-        </thead>
-        <tbody>
-          ${transaction.items.map(item => `
-            <tr style="border-bottom:1px solid #f1f5f9;">
-              <td style="padding:5px 6px;">${item.name}</td>
-              <td style="padding:5px 6px;text-align:center;">${item.qty}</td>
-              <td style="padding:5px 6px;text-align:right;">HK$${item.price}</td>
-              <td style="padding:5px 6px;text-align:right;">HK$${(item.price * item.qty).toFixed(0)}</td>
-            </tr>
-            ${item.pickupDate ? `<tr><td colspan="4" style="padding:2px 6px;font-size:8px;color:#c026d3;">→ 預計取貨日期：${item.pickupDate}</td></tr>` : ''}
-          `).join('')}
-        </tbody>
-      </table>
+          ${item.pickupDate ? `<tr><td colspan="4" style="padding:2px 6px; font-size:8px; color:#c026d3;">→ 預計取貨日期：${item.pickupDate}</td></tr>` : ''}
+        `).join('')}
+      </tbody>
+    </table>
 
-      <div style="text-align:right;font-size:9.5px;margin-bottom:10px;">
-        小計：HK$${transaction.subtotal}<br>
-        ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
-        <span style="font-size:12px;font-weight:700;color:#4c1d95;">總金額：HK$${transaction.total}</span><br>
-        <span style="font-size:8.5px;">支付方式：${transaction.paymentMethod}</span>
-      </div>
+    <div style="text-align:right; font-size:9.5px; margin-bottom:10px;">
+      小計：HK$${transaction.subtotal}<br>
+      ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
+      <span style="font-size:12px; font-weight:700; color:#4c1d95;">總金額：HK$${transaction.total}</span><br>
+      <span style="font-size:8.5px;">支付方式：${transaction.paymentMethod}</span>
+    </div>
 
-      <div style="text-align:right;font-size:10.5px;color:#6b7280;margin-top:8px;">
-        Thank you for your business!
-      </div>
-    `;
+    <div style="text-align:right; font-size:10.5px; color:#6b7280; margin-top:8px;">
+      Thank you for your business!
+    </div>
+  `;
 
-    document.body.appendChild(tempDiv);
+  document.body.appendChild(tempDiv);
 
-    const canvas = await html2canvas(tempDiv, { scale: 3.5, backgroundColor: '#ffffff' });
-    const imgData = canvas.toDataURL('image/png');
+  const canvas = await html2canvas(tempDiv, { scale: 3.5, backgroundColor: '#ffffff' });
+  const imgData = canvas.toDataURL('image/png');
 
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [148, 210] });
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [148, 210] });
+  const pdfWidth = pdf.internal.pageSize.getWidth();
+  const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-    pdf.addImage(imgData, 'PNG', margin, margin, pdfWidth - (margin * 2), pdfHeight);
-    pdf.save(`Invoice_${transaction.invoiceNumber}_A5.pdf`);
+  pdf.addImage(imgData, 'PNG', margin, margin, pdfWidth - (margin * 2), pdfHeight);
+  pdf.save(`Invoice_${transaction.invoiceNumber}_A5.pdf`);
 
-    document.body.removeChild(tempDiv);
-  };
+  document.body.removeChild(tempDiv);
+};
 
   // ==================== 匯出 Excel ====================
   const exportToExcel = () => {

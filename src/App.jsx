@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
   ShoppingCart, Package, BarChart3, Search, Plus, Minus, X, 
-  CreditCard, Banknote, Smartphone, CheckCircle, AlertCircle, Download, Send 
+  CreditCard, Banknote, Smartphone, CheckCircle, AlertCircle, Download, Send, FileDown 
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import * as XLSX from 'xlsx';
 
 const companyInfo = {
   name: "麗明珠真髮中心",
@@ -65,6 +66,10 @@ function App() {
   const [newItem, setNewItem] = useState({
     name: '', price: '', type: 'product', category: '', requiresProcessing: false, defaultProcessingDays: 4, stock: ''
   });
+
+  // 新增：日期範圍篩選
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   useEffect(() => {
     const savedItems = localStorage.getItem('pos_items');
@@ -375,76 +380,73 @@ function App() {
   };
 
   const printInvoice = (transaction) => {
-  if (!transaction) return;
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) return alert('請允許彈出視窗使用列印功能');
+    if (!transaction) return;
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return alert('請允許彈出視窗使用列印功能');
 
-  printWindow.document.write(`
-    <html>
-      <head>
-        <title>Invoice - ${transaction.invoiceNumber}</title>
-        <style>
-          @media print { @page { size: A5 portrait; margin: 8mm; } }
-          body { font-family: system-ui, sans-serif; padding: 12px; line-height: 1.45; font-size: 11px; }
-          .header { text-align: center; margin-bottom: 8px; }
-          .logo { height: 82px; margin-bottom: 8px; }
-          table { width: 100%; border-collapse: collapse; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
-          th, td { padding: 7px 9px; text-align: left; border-bottom: 1px solid #f3e8ff; }
-          th { background: #374151; color: white; }
-          .total { text-align: right; font-size: 12px; margin-top: 10px; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <img src="/logo.png" class="logo" />
-          <hr style="border: none; border-top: 1.5px solid #374151; margin: 4px 0 14px;" />
-        </div>
-
-        <div style="text-align:center; font-size:13px; font-weight:700; margin-bottom:10px;">發 票 / 訂 單 INVOICE</div>
-
-        <p style="font-size:10.5px; margin-bottom:10px;">
-          <strong>Invoice No:</strong> ${transaction.invoiceNumber} &nbsp;&nbsp;
-          <strong>Date:</strong> ${transaction.date} ${transaction.time}<br>
-          ${transaction.customerName ? `<strong>客戶：</strong> ${transaction.customerName}<br>` : ''}
-          ${transaction.customerPhone ? `電話：${transaction.customerPhone}<br>` : ''}
-        </p>
-
-        <table>
-          <thead>
-            <tr>
-              <th>項目</th>
-              <th style="text-align:center">數量</th>
-              <th style="text-align:right">單價</th>
-              <th style="text-align:right">小計</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${transaction.items.map(item => `
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Invoice - ${transaction.invoiceNumber}</title>
+          <style>
+            @media print { @page { size: A5 portrait; margin: 8mm; } }
+            body { font-family: system-ui, sans-serif; padding: 12px; line-height: 1.45; font-size: 11px; }
+            .header { text-align: center; margin-bottom: 8px; }
+            .logo { height: 65px; margin-bottom: 4px; }
+            h1 { color: #9f1239; margin: 0; font-size: 16px; }
+            table { width: 100%; border-collapse: collapse; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+            th, td { padding: 7px 9px; text-align: left; border-bottom: 1px solid #f3e8ff; }
+            th { background: #374151; color: white; }
+            .total { text-align: right; font-size: 12px; margin-top: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <img src="/logo.png" class="logo" />
+            <h1>${companyInfo.name}</h1>
+            <p style="margin:0; color:#9f1239; font-size:10px;">${companyInfo.english}</p>
+          </div>
+          <h2 style="text-align:center; font-size:14px; margin:6px 0;">發 票 / 訂 單 INVOICE</h2>
+          <p style="font-size:10.5px; margin-bottom:8px;">
+            <strong>Invoice No:</strong> ${transaction.invoiceNumber} &nbsp;&nbsp;
+            <strong>Date:</strong> ${transaction.date} ${transaction.time}<br>
+            ${transaction.customerName ? `<strong>客戶：</strong> ${transaction.customerName}<br>` : ''}
+            ${transaction.customerPhone ? `電話：${transaction.customerPhone}<br>` : ''}
+          </p>
+          <table>
+            <thead>
               <tr>
-                <td>${item.name}</td>
-                <td style="text-align:center">${item.qty}</td>
-                <td style="text-align:right">HK$${item.price}</td>
-                <td style="text-align:right">HK$${(item.price * item.qty).toFixed(0)}</td>
+                <th>項目</th>
+                <th style="text-align:center">數量</th>
+                <th style="text-align:right">單價</th>
+                <th style="text-align:right">小計</th>
               </tr>
-              ${item.pickupDate ? `<tr><td colspan="4" style="color:#c2416f; font-size:9.5px;">→ 預計取貨日期：${item.pickupDate}</td></tr>` : ''}
-            `).join('')}
-          </tbody>
-        </table>
-
-        <div class="total">
-          <strong style="font-size:13px; color:#9f1239;">總金額：HK$${transaction.total}</strong><br>
-          支付方式：${transaction.paymentMethod}
-        </div>
-
-        <div style="margin-top:12px; font-size:9px; color:#555;">
-          ${companyInfo.terms}
-        </div>
-      </body>
-    </html>
-  `);
-  printWindow.document.close();
-  setTimeout(() => printWindow.print(), 300);
-};
+            </thead>
+            <tbody>
+              ${transaction.items.map(item => `
+                <tr>
+                  <td>${item.name}</td>
+                  <td style="text-align:center">${item.qty}</td>
+                  <td style="text-align:right">HK$${item.price}</td>
+                  <td style="text-align:right">HK$${(item.price * item.qty).toFixed(0)}</td>
+                </tr>
+                ${item.pickupDate ? `<tr><td colspan="4" style="color:#c2416f; font-size:9.5px;">→ 預計取貨日期：${item.pickupDate}</td></tr>` : ''}
+              `).join('')}
+            </tbody>
+          </table>
+          <div class="total">
+            <strong style="font-size:13px; color:#9f1239;">總金額：HK$${transaction.total}</strong><br>
+            支付方式：${transaction.paymentMethod}
+          </div>
+          <div style="margin-top:10px; font-size:9px; color:#555;">
+            ${companyInfo.terms}
+          </div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 300);
+  };
 
   // ==================== WhatsApp 發送功能 ====================
   const sendToWhatsApp = (transaction) => {
@@ -459,7 +461,7 @@ function App() {
     window.open(whatsappUrl, '_blank');
   };
 
-  // ==================== PDF 生成（已按要求調整） ====================
+  // ==================== PDF 生成 ====================
   const generateReceiptPDF = async (transaction) => {
     const tempDiv = document.createElement('div');
     tempDiv.style.position = 'absolute';
@@ -514,114 +516,165 @@ function App() {
   };
 
   const generateInvoicePDF = async (transaction) => {
-  const margin = 5.5;
-  const pageWidth = 148;
-  const contentWidth = pageWidth - (margin * 2);
+    const margin = 5.5;
+    const pageWidth = 148;
+    const contentWidth = pageWidth - (margin * 2);
 
-  const tempDiv = document.createElement('div');
-  tempDiv.style.position = 'absolute';
-  tempDiv.style.left = '-9999px';
-  tempDiv.style.width = `${contentWidth}mm`;
-  tempDiv.style.padding = '4mm 0';
-  tempDiv.style.background = '#ffffff';
-  tempDiv.style.fontFamily = 'system-ui, -apple-system, sans-serif';
-  tempDiv.style.fontSize = '10px';
-  tempDiv.style.lineHeight = '1.4';
-  tempDiv.style.color = '#1f2937';
+    const tempDiv = document.createElement('div');
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.left = '-9999px';
+    tempDiv.style.width = `${contentWidth}mm`;
+    tempDiv.style.padding = '4mm 0';
+    tempDiv.style.background = '#ffffff';
+    tempDiv.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+    tempDiv.style.fontSize = '10px';
+    tempDiv.style.lineHeight = '1.4';
+    tempDiv.style.color = '#1f2937';
 
-  tempDiv.innerHTML = `
-    <div style="text-align:center; margin-bottom:6px">
-      <img src="/logo.png" style="height:82px; margin-bottom:8px; display:block; margin-left:auto; margin-right:auto;" />
-      <hr style="border: none; border-top: 1.5px solid #374151; margin: 4px 0 14px;" />
-    </div>
-
-    <div style="text-align:center; font-size:13px; font-weight:700; margin-bottom:10px;">發 票 / 訂 單 INVOICE</div>
-
-    <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:9.5px;">
-      <div>
-        <strong>Invoice No:</strong> ${transaction.invoiceNumber}<br>
-        <strong>Date:</strong> ${transaction.date} &nbsp; <strong>Time:</strong> ${transaction.time}
+    tempDiv.innerHTML = `
+      <div style="text-align:center; margin-bottom:6px">
+        <img src="/logo.png" style="height:82px; margin-bottom:8px; display:block; margin-left:auto; margin-right:auto;" />
+        <hr style="border: none; border-top: 1.5px solid #374151; margin: 4px 0 14px;" />
       </div>
-      <div style="text-align:right;">
-        ${transaction.customerName ? `<strong>客戶：</strong> ${transaction.customerName}<br>` : ''}
-        ${transaction.customerPhone ? `電話：${transaction.customerPhone}` : ''}
-      </div>
-    </div>
 
-    <div style="border-radius:14px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.08); border:1px solid #e5e7eb; margin-bottom:14px;">
-      <table style="width:100%; border-collapse:collapse; font-size:9.5px; background:white;">
-        <thead>
-          <tr style="background:#374151; color:white;">
-            <th style="padding:8px 10px; text-align:left; border-radius:14px 0 0 0;">項目</th>
-            <th style="padding:8px 10px; text-align:center; width:9%;">數量</th>
-            <th style="padding:8px 10px; text-align:right; width:14%;">單價</th>
-            <th style="padding:8px 10px; text-align:right; width:14%; border-radius:0 14px 0 0;">小計</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${transaction.items.map((item, index) => `
-            <tr style="background:${index % 2 === 0 ? '#fff' : '#fdf2f8'};">
-              <td style="padding:8px 10px; border-bottom:1px solid #f3e8ff;">${item.name}</td>
-              <td style="padding:8px 10px; text-align:center; border-bottom:1px solid #f3e8ff;">${item.qty}</td>
-              <td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f3e8ff;">HK$${item.price}</td>
-              <td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f3e8ff;">HK$${(item.price * item.qty).toFixed(0)}</td>
+      <div style="text-align:center; font-size:13px; font-weight:700; margin-bottom:10px;">發 票 / 訂 單 INVOICE</div>
+
+      <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:9.5px;">
+        <div>
+          <strong>Invoice No:</strong> ${transaction.invoiceNumber}<br>
+          <strong>Date:</strong> ${transaction.date} &nbsp; <strong>Time:</strong> ${transaction.time}
+        </div>
+        <div style="text-align:right;">
+          ${transaction.customerName ? `<strong>客戶：</strong> ${transaction.customerName}<br>` : ''}
+          ${transaction.customerPhone ? `電話：${transaction.customerPhone}` : ''}
+        </div>
+      </div>
+
+      <div style="border-radius:14px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.08); border:1px solid #e5e7eb; margin-bottom:14px;">
+        <table style="width:100%; border-collapse:collapse; font-size:9.5px; background:white;">
+          <thead>
+            <tr style="background:#374151; color:white;">
+              <th style="padding:8px 10px; text-align:left; border-radius:14px 0 0 0;">項目</th>
+              <th style="padding:8px 10px; text-align:center; width:9%;">數量</th>
+              <th style="padding:8px 10px; text-align:right; width:14%;">單價</th>
+              <th style="padding:8px 10px; text-align:right; width:14%; border-radius:0 14px 0 0;">小計</th>
             </tr>
-            ${item.pickupDate ? `
-            <tr style="background:#fdf2f8;">
-              <td colspan="4" style="padding:5px 10px; color:#c2416f; font-size:9px; border-bottom:1px solid #f3e8ff;">
-                → 預計取貨日期：${item.pickupDate}
-              </td>
-            </tr>` : ''}
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            ${transaction.items.map((item, index) => `
+              <tr style="background:${index % 2 === 0 ? '#fff' : '#fdf2f8'};">
+                <td style="padding:8px 10px; border-bottom:1px solid #f3e8ff;">${item.name}</td>
+                <td style="padding:8px 10px; text-align:center; border-bottom:1px solid #f3e8ff;">${item.qty}</td>
+                <td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f3e8ff;">HK$${item.price}</td>
+                <td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f3e8ff;">HK$${(item.price * item.qty).toFixed(0)}</td>
+              </tr>
+              ${item.pickupDate ? `
+              <tr style="background:#fdf2f8;">
+                <td colspan="4" style="padding:5px 10px; color:#c2416f; font-size:9px; border-bottom:1px solid #f3e8ff;">
+                  → 預計取貨日期：${item.pickupDate}
+                </td>
+              </tr>` : ''}
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
 
-    <div style="text-align:right; font-size:10.5px; margin-bottom:10px;">
-      小計：HK$${transaction.subtotal}<br>
-      ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
-      <strong style="font-size:13px; color:#9f1239;">總金額：HK$${transaction.total}</strong><br>
-      支付方式：${transaction.paymentMethod}
-    </div>
+      <div style="text-align:right; font-size:10.5px; margin-bottom:10px;">
+        小計：HK$${transaction.subtotal}<br>
+        ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
+        <strong style="font-size:13px; color:#9f1239;">總金額：HK$${transaction.total}</strong><br>
+        支付方式：${transaction.paymentMethod}
+      </div>
 
-    <div style="font-size:8.5px; color:#555; border-top:1px solid #ddd; padding-top:6px; line-height:1.3;">
-      ${companyInfo.terms}
-    </div>
+      <div style="font-size:8.5px; color:#555; border-top:1px solid #ddd; padding-top:6px; line-height:1.3;">
+        ${companyInfo.terms}
+      </div>
 
-    <div style="margin-top:8px; font-size:8.5px; text-align:center; color:#666;">
-      ${companyInfo.address}<br>
-      Tel: ${companyInfo.phone} ｜ WhatsApp: ${companyInfo.whatsapp}
-    </div>
-  `;
+      <div style="margin-top:8px; font-size:8.5px; text-align:center; color:#666;">
+        ${companyInfo.address}<br>
+        Tel: ${companyInfo.phone} ｜ WhatsApp: ${companyInfo.whatsapp}
+      </div>
+    `;
 
-  document.body.appendChild(tempDiv);
+    document.body.appendChild(tempDiv);
 
-  const canvas = await html2canvas(tempDiv, {
-    scale: 4,
-    useCORS: true,
-    backgroundColor: '#ffffff',
-    logging: false
-  });
+    const canvas = await html2canvas(tempDiv, {
+      scale: 4,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      logging: false
+    });
 
-  const imgData = canvas.toDataURL('image/png');
+    const imgData = canvas.toDataURL('image/png');
 
-  const pdf = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: [148, 210]
-  });
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: [148, 210]
+    });
 
-  const pdfWidth = pdf.internal.pageSize.getWidth();
-  const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-  const x = margin;
-  const y = margin;
+    const x = margin;
+    const y = margin;
 
-  pdf.addImage(imgData, 'PNG', x, y, pdfWidth - (margin * 2), pdfHeight);
-  pdf.save(`Invoice_${transaction.invoiceNumber}_A5.pdf`);
+    pdf.addImage(imgData, 'PNG', x, y, pdfWidth - (margin * 2), pdfHeight);
+    pdf.save(`Invoice_${transaction.invoiceNumber}_A5.pdf`);
 
-  document.body.removeChild(tempDiv);
-};
+    document.body.removeChild(tempDiv);
+  };
+
+  // ==================== 匯出 Excel 功能 ====================
+  const exportToExcel = () => {
+    let filteredTransactions = [...transactions];
+
+    // 日期篩選
+    if (startDate) {
+      filteredTransactions = filteredTransactions.filter(tx => tx.date >= startDate);
+    }
+    if (endDate) {
+      filteredTransactions = filteredTransactions.filter(tx => tx.date <= endDate);
+    }
+
+    if (filteredTransactions.length === 0) {
+      showToast('沒有符合條件的訂單', 'error');
+      return;
+    }
+
+    // 準備資料
+    const data = filteredTransactions.map(tx => {
+      const itemsText = tx.items
+        .map(item => `${item.name} x${item.qty}`)
+        .join(', ');
+
+      return {
+        '日期': tx.date,
+        '發票編號': tx.invoiceNumber,
+        '客戶姓名': tx.customerName || '-',
+        '客戶電話': tx.customerPhone || '-',
+        '商品明細': itemsText,
+        '小計': tx.subtotal,
+        '折扣': tx.discount,
+        '總金額': tx.total,
+        '支付方式': tx.paymentMethod
+      };
+    });
+
+    // 建立工作表
+    const ws = XLSX.utils.json_to_sheet(data);
+
+    // 建立工作簿
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "發票總表");
+
+    // 設定檔名
+    const fileName = `發票總表_${startDate || '全部'}_至_${endDate || '全部'}.xlsx`;
+
+    // 下載
+    XLSX.writeFile(wb, fileName);
+    showToast(`已成功匯出 ${filteredTransactions.length} 筆訂單`, 'success');
+  };
 
   // ==================== 主畫面 ====================
   return (
@@ -646,7 +699,7 @@ function App() {
               { key: 'customers', label: '客戶列表' },
             ].map(tab => (
               <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                className={`px-6 py-3 text-sm font-medium border-b-2 ${activeTab === tab.key ? 'border-rose-600 text-rose-600' : 'border-transparent'}`}>
+                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.key ? 'border-rose-600 text-rose-600' : 'border-transparent hover:text-slate-600'}`}>
                 {tab.label}
               </button>
             ))}
@@ -662,7 +715,7 @@ function App() {
               <h2 className="text-2xl font-semibold mb-4">商品與服務</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredItems.map(item => (
-                  <div key={item.id} onClick={() => addToCart(item)} className="bg-white border rounded-2xl p-4 cursor-pointer hover:border-rose-300">
+                  <div key={item.id} onClick={() => addToCart(item)} className="bg-white border rounded-2xl p-4 cursor-pointer hover:border-rose-300 transition-all hover:shadow-sm">
                     <div className="font-semibold mb-1">{item.name}</div>
                     <div className="text-sm text-slate-500 mb-2">{item.category}</div>
                     <div className="text-2xl font-bold">HK${item.price}</div>
@@ -671,7 +724,7 @@ function App() {
               </div>
             </div>
 
-            <div className="w-96 bg-white rounded-3xl border p-4 sticky top-20 h-fit">
+            <div className="w-96 bg-white rounded-3xl border p-4 sticky top-20 h-fit shadow-sm">
               <div className="font-semibold mb-3 flex items-center gap-2">
                 <ShoppingCart className="text-rose-600" /> 購物車
               </div>
@@ -698,7 +751,7 @@ function App() {
               )) : <p className="text-center text-slate-400 py-4">購物車是空的</p>}
 
               {cart.length > 0 && (
-                <button onClick={openCheckout} className="mt-4 w-full bg-rose-600 text-white py-3 rounded-xl font-semibold">
+                <button onClick={openCheckout} className="mt-4 w-full bg-rose-600 text-white py-3 rounded-xl font-semibold hover:bg-rose-700 transition-colors">
                   結帳付款
                 </button>
               )}
@@ -715,7 +768,7 @@ function App() {
                 <Plus className="w-4 h-4" /> 添加商品 / 服務
               </button>
             </div>
-            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden">
+            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
               <table className="pos-table w-full">
                 <thead>
                   <tr>
@@ -748,30 +801,67 @@ function App() {
           </div>
         )}
 
-        {/* 訂單記錄頁面 */}
+        {/* 訂單記錄頁面（已優化 + 匯出功能） */}
         {activeTab === 'reports' && (
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight mb-6">訂單記錄</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-semibold tracking-tight">訂單記錄</h2>
+              <button 
+                onClick={exportToExcel}
+                className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-medium"
+              >
+                <FileDown className="w-4 h-4" /> 匯出 Excel
+              </button>
+            </div>
+
+            {/* 日期篩選 */}
+            <div className="bg-white rounded-2xl border p-4 mb-6 flex flex-wrap gap-4 items-end">
+              <div>
+                <label className="text-sm font-medium text-slate-600 block mb-1">開始日期</label>
+                <input 
+                  type="date" 
+                  value={startDate} 
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="border rounded-xl px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-600 block mb-1">結束日期</label>
+                <input 
+                  type="date" 
+                  value={endDate} 
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="border rounded-xl px-3 py-2 text-sm"
+                />
+              </div>
+              <button 
+                onClick={() => { setStartDate(''); setEndDate(''); }}
+                className="px-4 py-2 text-sm border rounded-xl hover:bg-slate-50"
+              >
+                清除篩選
+              </button>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-              <div className="bg-white rounded-3xl p-6 border border-slate-200">
+              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
                 <div className="text-sm text-slate-500">今日交易筆數</div>
                 <div className="text-5xl font-semibold tabular-nums tracking-tighter mt-2">
                   {transactions.filter(tx => tx.date === new Date().toISOString().split('T')[0]).length}
                 </div>
               </div>
-              <div className="bg-white rounded-3xl p-6 border border-slate-200">
+              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
                 <div className="text-sm text-slate-500">今日營業額</div>
                 <div className="text-5xl font-semibold tabular-nums tracking-tighter mt-2 text-emerald-600">
                   HK${transactions.filter(tx => tx.date === new Date().toISOString().split('T')[0]).reduce((sum, tx) => sum + tx.total, 0)}
                 </div>
               </div>
-              <div className="bg-white rounded-3xl p-6 border border-slate-200">
+              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
                 <div className="text-sm text-slate-500">累計訂單數</div>
                 <div className="text-5xl font-semibold tabular-nums tracking-tighter mt-2">{transactions.length}</div>
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden">
+            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
               {transactions.length > 0 ? (
                 <table className="pos-table w-full">
                   <thead>
@@ -785,21 +875,28 @@ function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {transactions.sort((a, b) => b.id - a.id).map(tx => (
-                      <tr key={tx.id}>
-                        <td className="font-mono text-sm font-semibold">{tx.invoiceNumber}</td>
-                        <td className="text-sm text-slate-500">{tx.date} {tx.time}</td>
-                        <td>{tx.customerName || '-'}</td>
-                        <td className="text-right font-semibold">HK${tx.total}</td>
-                        <td><span className="text-xs px-3 py-1 bg-slate-100 rounded-full">{tx.paymentMethod}</span></td>
-                        <td className="text-center">
-                          <div className="flex justify-center gap-2">
-                            <button onClick={() => generateReceiptPDF(tx)} className="text-xs px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg">Receipt</button>
-                            <button onClick={() => generateInvoicePDF(tx)} className="text-xs px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg">Invoice</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    {transactions
+                      .filter(tx => {
+                        if (startDate && tx.date < startDate) return false;
+                        if (endDate && tx.date > endDate) return false;
+                        return true;
+                      })
+                      .sort((a, b) => b.id - a.id)
+                      .map(tx => (
+                        <tr key={tx.id}>
+                          <td className="font-mono text-sm font-semibold">{tx.invoiceNumber}</td>
+                          <td className="text-sm text-slate-500">{tx.date} {tx.time}</td>
+                          <td>{tx.customerName || '-'}</td>
+                          <td className="text-right font-semibold">HK${tx.total}</td>
+                          <td><span className="text-xs px-3 py-1 bg-slate-100 rounded-full">{tx.paymentMethod}</span></td>
+                          <td className="text-center">
+                            <div className="flex justify-center gap-2">
+                              <button onClick={() => generateReceiptPDF(tx)} className="text-xs px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg">Receipt</button>
+                              <button onClick={() => generateInvoicePDF(tx)} className="text-xs px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg">Invoice</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               ) : (
@@ -827,7 +924,7 @@ function App() {
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden">
+            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
               {allCustomers.length > 0 ? (
                 <table className="pos-table w-full">
                   <thead>

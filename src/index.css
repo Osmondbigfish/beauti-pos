@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* POS 專用樣式優化 */
+:root {
+  --primary: #9f1239;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* 觸控友善按鈕 */
+.pos-button {
+  @apply px-6 py-3 rounded-xl font-semibold transition-all active:scale-[0.985] disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.pos-button-primary {
+  @apply bg-rose-600 hover:bg-rose-700 text-white shadow-sm;
+}
+
+.pos-button-secondary {
+  @apply bg-slate-100 hover:bg-slate-200 text-slate-700;
+}
+
+/* 商品卡片 */
+.product-card {
+  @apply bg-white border border-slate-200 rounded-2xl p-4 cursor-pointer transition-all hover:shadow-md hover:border-rose-200 active:scale-[0.985];
+}
+
+.product-card.selected {
+  @apply border-rose-500 ring-2 ring-rose-200;
+}
+
+/* 購物車項目 */
+.cart-item {
+  @apply flex items-center justify-between p-3 bg-slate-50 rounded-xl;
+}
+
+/* 表格樣式 */
+.pos-table th {
+  @apply px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-100;
+}
+
+.pos-table td {
+  @apply px-4 py-3 text-sm text-slate-700 border-t border-slate-100;
+}
+
+/* Modal */
+.modal {
+  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm;
+}
+
+/* Toast */
+.toast {
+  @apply fixed bottom-6 right-6 z-[60] bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-xl flex items-center gap-3;
+}
+
+/* 列印優化樣式 */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .printable-receipt, .printable-invoice {
+    visibility: visible;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 20px;
+    background: white;
+    color: black;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .printable-receipt {
+    max-width: 80mm;
+  }
+  .printable-invoice {
+    max-width: 210mm;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

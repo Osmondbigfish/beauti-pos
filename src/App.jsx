@@ -459,8 +459,6 @@ function App() {
     setToast({ message, type });
     setTimeout(() => setToast(null), 2800);
   };
-
-    // ==================== PDF 與列印功能（完整版） ====================
   const printReceipt = (transaction) => {
     if (!transaction) return;
     const printWindow = window.open('', '_blank');
@@ -841,7 +839,6 @@ function App() {
   // ==================== 主畫面 JSX ====================
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header */}
       <header className="bg-white border-b sticky top-0 z-40">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -853,7 +850,6 @@ function App() {
           </div>
         </div>
 
-        {/* Navigation */}
         <div className="max-w-[1600px] mx-auto px-6 border-t">
           <div className="flex gap-1">
             {[
@@ -918,29 +914,25 @@ function App() {
                 <ShoppingCart className="text-rose-600" /> 購物車
               </div>
 
-              {cart.length > 0 ? (
-                cart.map(item => (
-                  <div key={item.id} className="border rounded-xl p-3 mb-2">
-                    <div className="flex justify-between text-sm">
-                      <div>{item.name} × {item.qty}</div>
-                      <div>HK$${(item.price * item.qty).toFixed(0)}</div>
-                    </div>
-                    {item.pickupDate && (
-                      <div className="mt-2">
-                        <div className="text-xs text-amber-600 mb-1">預計取貨日期</div>
-                        <input type="date" value={item.pickupDate} onChange={e => updatePickupDate(item.id, e.target.value)} className="w-full text-xs border rounded px-2 py-1" />
-                      </div>
-                    )}
-                    <div className="flex gap-2 mt-2">
-                      <button onClick={() => updateCartQty(item.id, item.qty - 1)} className="px-2 border rounded text-sm">-</button>
-                      <button onClick={() => updateCartQty(item.id, item.qty + 1)} className="px-2 border rounded text-sm">+</button>
-                      <button onClick={() => removeFromCart(item.id)} className="ml-auto text-red-500 text-xs">移除</button>
-                    </div>
+              {cart.length > 0 ? cart.map(item => (
+                <div key={item.id} className="border rounded-xl p-3 mb-2">
+                  <div className="flex justify-between text-sm">
+                    <div>{item.name} × {item.qty}</div>
+                    <div>HK$${(item.price * item.qty).toFixed(0)}</div>
                   </div>
-                ))
-              ) : (
-                <p className="text-center text-slate-400 py-4">購物車是空的</p>
-              )}
+                  {item.pickupDate && (
+                    <div className="mt-2">
+                      <div className="text-xs text-amber-600 mb-1">預計取貨日期</div>
+                      <input type="date" value={item.pickupDate} onChange={e => updatePickupDate(item.id, e.target.value)} className="w-full text-xs border rounded px-2 py-1" />
+                    </div>
+                  )}
+                  <div className="flex gap-2 mt-2">
+                    <button onClick={() => updateCartQty(item.id, item.qty-1)} className="px-2 border rounded text-sm">-</button>
+                    <button onClick={() => updateCartQty(item.id, item.qty+1)} className="px-2 border rounded text-sm">+</button>
+                    <button onClick={() => removeFromCart(item.id)} className="ml-auto text-red-500 text-xs">移除</button>
+                  </div>
+                </div>
+              )) : <p className="text-center text-slate-400 py-4">購物車是空的</p>}
 
               {cart.length > 0 && (
                 <button onClick={openCheckout} className="mt-4 w-full bg-rose-600 text-white py-3 rounded-xl font-semibold hover:bg-rose-700 transition-colors">
@@ -1031,8 +1023,6 @@ function App() {
             </div>
           </div>
         )}
-
-        {/* 其他分頁（庫存、訂單記錄、客戶列表）請使用之前完整版本補上 */}
       </div>
 
       {/* 新增預約 Modal */}
@@ -1074,8 +1064,6 @@ function App() {
           </div>
         </div>
       )}
-
-      {/* 其他原有 Modal（Payment, Success, Add Customer, Add Item 等）請使用之前完整版本補上 */}
 
       {toast && <div className="fixed bottom-6 right-6 bg-slate-900 text-white px-6 py-3 rounded-2xl">{toast.message}</div>}
     </div>

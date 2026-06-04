@@ -542,7 +542,7 @@ function App() {
   };
 
   const closeSuccessModal = () => { setIsSuccessModalOpen(false); setLastTransaction(null); };
-    const printReceipt = (transaction) => {
+      const printReceipt = (transaction) => {
     if (!transaction) return;
     const printWindow = window.open('', '_blank');
     if (!printWindow) return alert('請允許彈出視窗使用列印功能');
@@ -559,14 +559,14 @@ function App() {
             th, td { padding: 7px 8px; border-bottom: 1px solid #f1f5f9; }
             th { background: #f8fafc; font-weight: 600; }
             .total { text-align: right; font-size: 12px; }
+            .terms { margin-top: 12px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 8.5px; line-height: 1.4; color: #4b5563; }
             .thankyou { text-align: right; font-size: 12px; color: #6b7280; margin-top: 12px; }
           </style>
         </head>
         <body>
           <div class="header">
-            <img src="/logo.png" style="height:120px; margin-bottom:8px;" />
+            <img src="/logo.png" style="height:120px; margin-bottom:6px;" />
             <div style="font-size:20px; font-weight:700;">RECEIPT</div>
-            <div style="font-size:13px; color:#6b7280;">麗明珠真髮中心</div>
           </div>
 
           <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:10.5px;">
@@ -618,6 +618,21 @@ function App() {
             ${transaction.pickupDate ? `<br>→ 預計取貨日期：${transaction.pickupDate}` : ''}
           </div>
 
+          <!-- 條款區域 -->
+          <div class="terms">
+            <strong style="font-size:9px;">取貨期限 / Collection Period</strong><br>
+            Please collect your goods within three months from the order date. Uncollected items after this period will be void.<br>
+            請於本訂單日期起三個月內憑單取回假髮；逾期未取者，該物品視作作廢。<br><br>
+
+            <strong style="font-size:9px;">自然磨損及褪色 / Natural Wear and Tear</strong><br>
+            The company is not responsible for colour changes or other damage resulting from normal wear and tear or natural ageing of the hair.<br>
+            因日常使用或頭髮自然老化而引致的變色或損壞，本公司恕不負責。<br><br>
+
+            <strong style="font-size:9px;">清洗處理及天災責任 / Cleaning and Force Majeure</strong><br>
+            We will handle wigs with care during cleaning. However, the company is not liable for damage or loss caused by natural disasters or other events beyond our control.<br>
+            本公司在為客人清洗假髮時會小心處理；但若因天災或其他不可抗力之事由導致損壞或遺失，本公司概不負責。
+          </div>
+
           <div class="thankyou">Thank you for your business!</div>
         </body>
       </html>
@@ -626,7 +641,7 @@ function App() {
     setTimeout(() => printWindow.print(), 300);
   };
 
-  const printInvoice = (transaction) => {
+    const printInvoice = (transaction) => {
     if (!transaction) return;
     const printWindow = window.open('', '_blank');
     if (!printWindow) return alert('請允許彈出視窗使用列印功能');
@@ -643,14 +658,14 @@ function App() {
             th, td { padding: 7px 8px; border-bottom: 1px solid #f1f5f9; }
             th { background: #f8fafc; font-weight: 600; }
             .total { text-align: right; font-size: 11px; }
+            .terms { margin-top: 12px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 8.5px; line-height: 1.4; color: #4b5563; }
             .thankyou { text-align: right; font-size: 12px; color: #6b7280; margin-top: 10px; }
           </style>
         </head>
         <body>
           <div class="header">
-            <img src="/logo.png" style="height:145px; margin-bottom:8px;" />
+            <img src="/logo.png" style="height:145px; margin-bottom:6px;" />
             <div style="font-size:22px; font-weight:700;">INVOICE</div>
-            <div style="font-size:13px; color:#6b7280;">麗明珠真髮中心</div>
           </div>
 
           <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:10.5px;">
@@ -700,6 +715,21 @@ function App() {
             <strong style="font-size:14px;">總金額：HK$${transaction.total}</strong><br>
             支付方式：${transaction.paymentMethod}
             ${transaction.pickupDate ? `<br>→ 預計取貨日期：${transaction.pickupDate}` : ''}
+          </div>
+
+          <!-- 條款區域 -->
+          <div class="terms">
+            <strong style="font-size:9px;">取貨期限 / Collection Period</strong><br>
+            Please collect your goods within three months from the order date. Uncollected items after this period will be void.<br>
+            請於本訂單日期起三個月內憑單取回假髮；逾期未取者，該物品視作作廢。<br><br>
+
+            <strong style="font-size:9px;">自然磨損及褪色 / Natural Wear and Tear</strong><br>
+            The company is not responsible for colour changes or other damage resulting from normal wear and tear or natural ageing of the hair.<br>
+            因日常使用或頭髮自然老化而引致的變色或損壞，本公司恕不負責。<br><br>
+
+            <strong style="font-size:9px;">清洗處理及天災責任 / Cleaning and Force Majeure</strong><br>
+            We will handle wigs with care during cleaning. However, the company is not liable for damage or loss caused by natural disasters or other events beyond our control.<br>
+            本公司在為客人清洗假髮時會小心處理；但若因天災或其他不可抗力之事由導致損壞或遺失，本公司概不負責。
           </div>
 
           <div class="thankyou">Thank you for your business!</div>

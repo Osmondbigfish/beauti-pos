@@ -1661,12 +1661,51 @@ function App() {
       </div>
             {/* ==================== 所有 Modal ==================== */}
 
-      {/* Payment Modal - 已更新為兩欄客戶 + 渠道 */}
+            {/* Payment Modal - 已恢復客戶搜尋關聯功能 */}
       {isPaymentModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={closePaymentModal}>
           <div className="bg-white rounded-3xl p-8 w-full max-w-md" onClick={e => e.stopPropagation()}>
             <h2 className="text-2xl font-bold mb-4">確認付款</h2>
             <p className="text-4xl font-bold mb-6">HK${finalTotal}</p>
+
+            {/* 搜尋現有客戶 */}
+            <div className="mb-4">
+              <label className="text-sm font-medium text-slate-600 block mb-1">搜尋客戶（選填）</label>
+              <div className="relative">
+                <input 
+                  type="text" 
+                  value={customerSearchTerm} 
+                  onChange={(e) => {
+                    setCustomerSearchTerm(e.target.value);
+                    setShowCustomerSuggestions(true);
+                  }} 
+                  onFocus={() => setShowCustomerSuggestions(true)}
+                  placeholder="輸入客戶姓名或電話搜尋..." 
+                  className="w-full border p-3 rounded-xl focus:border-rose-400" 
+                />
+                
+                {/* 客戶建議下拉 */}
+                {showCustomerSuggestions && customerSuggestions.length > 0 && (
+                  <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-2xl shadow-lg max-h-48 overflow-auto">
+                    {customerSuggestions.map((customer, index) => (
+                      <div 
+                        key={index} 
+                        onClick={() => {
+                          setCheckoutCustomerName(customer.name);
+                          setCheckoutCustomerPhone(customer.phone || '');
+                          setCustomerSearchTerm(customer.name);
+                          setShowCustomerSuggestions(false);
+                        }} 
+                        className="px-4 py-3 hover:bg-rose-50 cursor-pointer border-b last:border-none"
+                      >
+                        <div className="font-medium">{customer.name}</div>
+                        {customer.phone && <div className="text-xs text-slate-500">{customer.phone}</div>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
 
             {/* 客戶名稱 + 客戶聯絡號碼 */}
             <div className="mb-4 grid grid-cols-2 gap-3">

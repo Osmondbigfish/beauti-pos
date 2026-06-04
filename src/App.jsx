@@ -70,7 +70,7 @@ function App() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  // ==================== 預約功能 ====================
+  // ==================== 預約功能狀態 ====================
   const [appointments, setAppointments] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -81,7 +81,7 @@ function App() {
   const [isWhatsAppConfirmOpen, setIsWhatsAppConfirmOpen] = useState(false);
   const [pendingAppointment, setPendingAppointment] = useState(null);
 
-  // localStorage
+  // ==================== localStorage 同步 ====================
   useEffect(() => {
     const savedItems = localStorage.getItem('pos_items');
     if (savedItems) setItems(JSON.parse(savedItems));
@@ -101,6 +101,7 @@ function App() {
   useEffect(() => { localStorage.setItem('pos_customers', JSON.stringify(customers)); }, [customers]);
   useEffect(() => { localStorage.setItem('pos_appointments', JSON.stringify(appointments)); }, [appointments]);
 
+  // ==================== 計算屬性 ====================
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
   const discountAmount = Math.round(subtotal * (discountPercent / 100));
   const total = Math.max(0, subtotal - discountAmount);
@@ -110,7 +111,7 @@ function App() {
                     (categoryFilter === '全部' || item.category === categoryFilter))
     .sort((a, b) => a.type === b.type ? a.name.localeCompare(b.name, 'zh-HK') : (a.type === 'product' ? -1 : 1));
 
-  // 預約相關函數
+  // ==================== 預約相關函數 ====================
   const getAppointmentsForDate = (date) => {
     return appointments.filter(a => a.date === date).sort((a, b) => a.time.localeCompare(b.time));
   };
@@ -124,7 +125,7 @@ function App() {
     return getAppointmentsForDate(today);
   };
 
-  // 月曆
+  // ==================== 月曆相關函數 ====================
   const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
   const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
 
@@ -161,7 +162,7 @@ function App() {
     setSelectedDate(dateStr);
   };
 
-  // 新增預約
+  // ==================== 新增預約 ====================
   const openAddAppointment = () => {
     setNewAppointment({
       customerName: '',
@@ -454,11 +455,6 @@ function App() {
   };
 
   const closeSuccessModal = () => { setIsSuccessModalOpen(false); setLastTransaction(null); };
-
-  const showToastMessage = (message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 2800);
-  };
   const printReceipt = (transaction) => {
     if (!transaction) return;
     const printWindow = window.open('', '_blank');
@@ -836,7 +832,7 @@ function App() {
     showToast(`已成功匯出 ${filteredTransactions.length} 筆訂單`, 'success');
   };
 
-  // ==================== 主畫面 JSX ====================
+  // ==================== 主畫面 JSX 開始 ====================
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white border-b sticky top-0 z-40">
@@ -869,7 +865,7 @@ function App() {
       </header>
 
       <div className="max-w-[1600px] mx-auto px-6 py-6">
-        {/* 銷售頁面 */}
+                {/* ==================== 銷售頁面 ==================== */}
         {activeTab === 'sales' && (
           <div className="flex gap-6">
             <div className="flex-1">
@@ -914,25 +910,29 @@ function App() {
                 <ShoppingCart className="text-rose-600" /> 購物車
               </div>
 
-              {cart.length > 0 ? cart.map(item => (
-                <div key={item.id} className="border rounded-xl p-3 mb-2">
-                  <div className="flex justify-between text-sm">
-                    <div>{item.name} × {item.qty}</div>
-                    <div>HK$${(item.price * item.qty).toFixed(0)}</div>
-                  </div>
-                  {item.pickupDate && (
-                    <div className="mt-2">
-                      <div className="text-xs text-amber-600 mb-1">預計取貨日期</div>
-                      <input type="date" value={item.pickupDate} onChange={e => updatePickupDate(item.id, e.target.value)} className="w-full text-xs border rounded px-2 py-1" />
+              {cart.length > 0 ? (
+                cart.map(item => (
+                  <div key={item.id} className="border rounded-xl p-3 mb-2">
+                    <div className="flex justify-between text-sm">
+                      <div>{item.name} × {item.qty}</div>
+                      <div>HK$${(item.price * item.qty).toFixed(0)}</div>
                     </div>
-                  )}
-                  <div className="flex gap-2 mt-2">
-                    <button onClick={() => updateCartQty(item.id, item.qty-1)} className="px-2 border rounded text-sm">-</button>
-                    <button onClick={() => updateCartQty(item.id, item.qty+1)} className="px-2 border rounded text-sm">+</button>
-                    <button onClick={() => removeFromCart(item.id)} className="ml-auto text-red-500 text-xs">移除</button>
+                    {item.pickupDate && (
+                      <div className="mt-2">
+                        <div className="text-xs text-amber-600 mb-1">預計取貨日期</div>
+                        <input type="date" value={item.pickupDate} onChange={e => updatePickupDate(item.id, e.target.value)} className="w-full text-xs border rounded px-2 py-1" />
+                      </div>
+                    )}
+                    <div className="flex gap-2 mt-2">
+                      <button onClick={() => updateCartQty(item.id, item.qty - 1)} className="px-2 border rounded text-sm">-</button>
+                      <button onClick={() => updateCartQty(item.id, item.qty + 1)} className="px-2 border rounded text-sm">+</button>
+                      <button onClick={() => removeFromCart(item.id)} className="ml-auto text-red-500 text-xs">移除</button>
+                    </div>
                   </div>
-                </div>
-              )) : <p className="text-center text-slate-400 py-4">購物車是空的</p>}
+                ))
+              ) : (
+                <p className="text-center text-slate-400 py-4">購物車是空的</p>
+              )}
 
               {cart.length > 0 && (
                 <button onClick={openCheckout} className="mt-4 w-full bg-rose-600 text-white py-3 rounded-xl font-semibold hover:bg-rose-700 transition-colors">
@@ -943,7 +943,173 @@ function App() {
           </div>
         )}
 
-        {/* 預約頁面 */}
+        {/* ==================== 庫存頁面 ==================== */}
+        {activeTab === 'inventory' && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-semibold tracking-tight">庫存管理</h2>
+              <button onClick={openAddItemModal} className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 text-white rounded-xl hover:bg-rose-700 font-medium">
+                <Plus className="w-4 h-4" /> 添加商品 / 服務
+              </button>
+            </div>
+            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+              <table className="pos-table w-full">
+                <thead>
+                  <tr>
+                    <th>名稱</th>
+                    <th>類型</th>
+                    <th>類別</th>
+                    <th className="text-right">單價</th>
+                    <th className="text-right w-40">庫存 / 時長</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map(item => (
+                    <tr key={item.id}>
+                      <td className="font-medium">{item.name}</td>
+                      <td>
+                        <span className={`inline-block px-3 py-0.5 text-xs rounded-full ${item.type === 'product' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                          {item.type === 'product' ? '商品' : '服務'}
+                        </span>
+                      </td>
+                      <td className="text-slate-500">{item.category}</td>
+                      <td className="text-right font-mono">HK${item.price}</td>
+                      <td className="text-right">
+                        {item.type === 'product' ? <span className="font-mono">{item.stock}</span> : <span className="text-emerald-600 font-medium">{item.duration}</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ==================== 訂單記錄頁面 ==================== */}
+        {activeTab === 'reports' && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-semibold tracking-tight">訂單記錄</h2>
+              <button onClick={exportToExcel} className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-medium">
+                <FileDown className="w-4 h-4" /> 匯出 Excel
+              </button>
+            </div>
+
+            <div className="bg-white rounded-2xl border p-4 mb-6 flex flex-wrap gap-4 items-end">
+              <div>
+                <label className="text-sm font-medium text-slate-600 block mb-1">開始日期</label>
+                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="border rounded-xl px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-600 block mb-1">結束日期</label>
+                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="border rounded-xl px-3 py-2 text-sm" />
+              </div>
+              <button onClick={() => { setStartDate(''); setEndDate(''); }} className="px-4 py-2 text-sm border rounded-xl hover:bg-slate-50">清除篩選</button>
+            </div>
+
+            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+              {transactions.length > 0 ? (
+                <table className="pos-table w-full">
+                  <thead>
+                    <tr>
+                      <th>發票編號</th>
+                      <th>日期 / 時間</th>
+                      <th>顧客</th>
+                      <th className="text-right">金額</th>
+                      <th>支付方式</th>
+                      <th className="text-center w-40">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transactions
+                      .filter(tx => {
+                        if (startDate && tx.date < startDate) return false;
+                        if (endDate && tx.date > endDate) return false;
+                        return true;
+                      })
+                      .sort((a, b) => b.id - a.id)
+                      .map(tx => (
+                        <tr key={tx.id}>
+                          <td className="font-mono text-sm font-semibold">{tx.invoiceNumber}</td>
+                          <td className="text-sm text-slate-500">{tx.date} {tx.time}</td>
+                          <td>{tx.customerName || '-'}</td>
+                          <td className="text-right font-semibold">HK${tx.total}</td>
+                          <td><span className="text-xs px-3 py-1 bg-slate-100 rounded-full">{tx.paymentMethod}</span></td>
+                          <td className="text-center">
+                            <div className="flex justify-center gap-2">
+                              <button onClick={() => generateReceiptPDF(tx)} className="text-xs px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg">Receipt</button>
+                              <button onClick={() => generateInvoicePDF(tx)} className="text-xs px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg">Invoice</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="py-16 text-center text-slate-400">尚無訂單記錄</div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ==================== 客戶列表頁面 ==================== */}
+        {activeTab === 'customers' && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-semibold tracking-tight">客戶列表</h2>
+              <button onClick={openAddCustomerModal} className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 text-white rounded-xl hover:bg-rose-700 font-medium">
+                <Plus className="w-4 h-4" /> 新增客戶
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-4 top-3.5 w-4 h-4 text-slate-400" />
+                <input type="text" placeholder="搜尋客戶姓名或電話..." value={customerSearchTerm} onChange={(e) => setCustomerSearchTerm(e.target.value)} className="w-full pl-11 py-3 border border-slate-200 rounded-2xl focus:border-rose-400" />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+              {allCustomers.length > 0 ? (
+                <table className="pos-table w-full">
+                  <thead>
+                    <tr>
+                      <th>姓名</th>
+                      <th>電話</th>
+                      <th className="text-right">累計消費</th>
+                      <th className="text-center">消費次數</th>
+                      <th>最後消費</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allCustomers
+                      .filter(c => c.name.toLowerCase().includes(customerSearchTerm.toLowerCase()) || c.phone.includes(customerSearchTerm))
+                      .map((customer, index) => {
+                        const customerTx = transactions.filter(tx => 
+                          (tx.customerName && tx.customerName === customer.name) || 
+                          (tx.customerPhone && tx.customerPhone === customer.phone)
+                        );
+                        const totalSpent = customerTx.reduce((sum, tx) => sum + tx.total, 0);
+                        return (
+                          <tr key={index}>
+                            <td className="font-medium">{customer.name}</td>
+                            <td className="text-slate-500">{customer.phone || '-'}</td>
+                            <td className="text-right font-semibold text-emerald-600">HK${totalSpent}</td>
+                            <td className="text-center">{customerTx.length}</td>
+                            <td className="text-sm text-slate-500">{customerTx.length > 0 ? customerTx.sort((a,b) => b.date.localeCompare(a.date))[0].date : '-'}</td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="py-16 text-center text-slate-400">尚無客戶資料</div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ==================== 預約頁面 ==================== */}
         {activeTab === 'appointments' && (
           <div>
             <div className="flex items-center justify-between mb-6">
@@ -1025,27 +1191,136 @@ function App() {
         )}
       </div>
 
-      {/* 新增預約 Modal */}
-      {isAddAppointmentModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setIsAddAppointmentModalOpen(false)}>
+      {/* ==================== 所有 Modal ==================== */}
+      {/* Payment Modal */}
+      {isPaymentModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={closePaymentModal}>
           <div className="bg-white rounded-3xl p-8 w-full max-w-md" onClick={e => e.stopPropagation()}>
-            <h2 className="text-2xl font-bold mb-6">新增預約</h2>
-            <div className="space-y-4">
-              <input type="text" placeholder="客戶稱呼" value={newAppointment.customerName} onChange={e => setNewAppointment({...newAppointment, customerName: e.target.value})} className="w-full border p-3 rounded-xl" />
-              <input type="text" placeholder="電話" value={newAppointment.phone} onChange={e => setNewAppointment({...newAppointment, phone: e.target.value})} className="w-full border p-3 rounded-xl" />
-              <input type="date" value={newAppointment.date} onChange={e => setNewAppointment({...newAppointment, date: e.target.value})} className="w-full border p-3 rounded-xl" />
-              <select value={newAppointment.time} onChange={e => setNewAppointment({...newAppointment, time: e.target.value})} className="w-full border p-3 rounded-xl">
-                {Array.from({ length: 21 }, (_, i) => {
-                  const hour = 10 + Math.floor(i / 2);
-                  const min = i % 2 === 0 ? '00' : '30';
-                  return `${hour}:${min}`;
-                }).map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-              <textarea placeholder="備註（選填）" value={newAppointment.notes} onChange={e => setNewAppointment({...newAppointment, notes: e.target.value})} className="w-full border p-3 rounded-xl" rows="2" />
+            <h2 className="text-2xl font-bold mb-4">確認付款</h2>
+            <p className="text-4xl font-bold mb-6">HK${total}</p>
+
+            <div className="mb-6">
+              <label className="text-sm font-medium text-slate-600 block mb-2">所屬客戶（選填）</label>
+              <div className="relative">
+                <input type="text" value={customerSearchTerm} onChange={(e) => { setCustomerSearchTerm(e.target.value); setSelectedCustomerForCheckout(null); setShowCustomerSuggestions(true); }} onFocus={() => setShowCustomerSuggestions(true)} placeholder="輸入客戶姓名或電話..." className="w-full border p-3 rounded-xl focus:border-rose-400" />
+                {showCustomerSuggestions && customerSuggestions.length > 0 && (
+                  <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-2xl shadow-lg max-h-48 overflow-auto">
+                    {customerSuggestions.map((customer, index) => (
+                      <div key={index} onClick={() => selectCustomer(customer)} className="px-4 py-3 hover:bg-rose-50 cursor-pointer border-b last:border-none">
+                        <div className="font-medium">{customer.name}</div>
+                        {customer.phone && <div className="text-xs text-slate-500">{customer.phone}</div>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {selectedCustomerForCheckout && <div className="mt-2 text-sm text-emerald-600">已選擇：{selectedCustomerForCheckout.name}</div>}
             </div>
-            <div className="flex gap-3 mt-6">
-              <button onClick={() => setIsAddAppointmentModalOpen(false)} className="flex-1 py-3 border rounded-xl">取消</button>
-              <button onClick={handleAddAppointment} className="flex-1 py-3 bg-rose-600 text-white rounded-xl">確認預約</button>
+
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              {paymentMethods.map(m => (
+                <button key={m.id} onClick={() => setSelectedPayment(m.id)} className={`p-4 border rounded-2xl ${selectedPayment === m.id ? 'border-rose-600 bg-rose-50' : ''}`}>{m.label}</button>
+              ))}
+            </div>
+
+            {selectedPayment === 'cash' && <input type="number" value={paidAmount} onChange={e => setPaidAmount(e.target.value)} className="w-full border p-3 rounded-xl mb-4 text-2xl" placeholder="支付金額" />}
+
+            <div className="flex gap-3">
+              <button onClick={closePaymentModal} className="flex-1 py-3 border rounded-xl">取消</button>
+              <button onClick={processCheckout} className="flex-1 py-3 bg-rose-600 text-white rounded-xl">確認交易</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {isSuccessModalOpen && lastTransaction && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={closeSuccessModal}>
+          <div className="bg-white rounded-3xl w-full max-w-xl p-8" onClick={e => e.stopPropagation()}>
+            <div className="text-center mb-6">
+              <CheckCircle className="w-16 h-16 text-emerald-500 mx-auto mb-3" />
+              <h2 className="text-2xl font-bold">交易成功！</h2>
+            </div>
+            <div className="flex flex-col gap-3">
+              <button onClick={() => printReceipt(lastTransaction)} className="flex-1 bg-slate-100 py-3 rounded-xl font-semibold">編印 Receipt</button>
+              <button onClick={() => printInvoice(lastTransaction)} className="flex-1 bg-rose-600 text-white py-3 rounded-xl font-semibold hover:bg-rose-700">編印 Invoice</button>
+              <button onClick={() => sendToWhatsApp(lastTransaction)} className="flex-1 bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 flex items-center justify-center gap-2"><Send className="w-5 h-5" /> 發送至客戶 WhatsApp</button>
+            </div>
+            <button onClick={closeSuccessModal} className="mt-6 w-full py-3 border rounded-xl">關閉</button>
+          </div>
+        </div>
+      )}
+
+      {/* Add Customer Modal */}
+      {isAddCustomerModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setIsAddCustomerModalOpen(false)}>
+          <div className="bg-white rounded-3xl p-8 w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <h2 className="text-2xl font-bold mb-6">新增客戶</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-slate-600">客戶姓名 *</label>
+                <input type="text" value={newCustomer.name} onChange={e => setNewCustomer({...newCustomer, name: e.target.value})} className="w-full border p-3 rounded-xl mt-1" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-600">電話</label>
+                <input type="text" value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} className="w-full border p-3 rounded-xl mt-1" />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-8">
+              <button onClick={() => setIsAddCustomerModalOpen(false)} className="flex-1 py-3 border rounded-xl">取消</button>
+              <button onClick={handleAddCustomer} className="flex-1 py-3 bg-rose-600 text-white rounded-xl">確認新增</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Item Modal */}
+      {isAddItemModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setIsAddItemModalOpen(false)}>
+          <div className="bg-white rounded-3xl p-8 w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <h2 className="text-2xl font-bold mb-6">添加商品 / 服務</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-slate-600">名稱</label>
+                <input type="text" value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} className="w-full border p-3 rounded-xl mt-1" placeholder="例如：短直真髮假髮" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-slate-600">類型</label>
+                  <select value={newItem.type} onChange={e => setNewItem({...newItem, type: e.target.value})} className="w-full border p-3 rounded-xl mt-1">
+                    <option value="product">商品</option>
+                    <option value="service">服務</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-600">價格</label>
+                  <input type="number" value={newItem.price} onChange={e => setNewItem({...newItem, price: e.target.value})} className="w-full border p-3 rounded-xl mt-1" placeholder="1280" />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-600">類別</label>
+                <input type="text" value={newItem.category} onChange={e => setNewItem({...newItem, category: e.target.value})} className="w-full border p-3 rounded-xl mt-1" placeholder="假髮 / 洗護服務" />
+              </div>
+              {newItem.type === 'product' && (
+                <div>
+                  <label className="text-sm font-medium text-slate-600">初始庫存</label>
+                  <input type="number" value={newItem.stock} onChange={e => setNewItem({...newItem, stock: e.target.value})} className="w-full border p-3 rounded-xl mt-1" placeholder="10" />
+                </div>
+              )}
+              <div className="flex items-center gap-3 pt-2">
+                <input type="checkbox" checked={newItem.requiresProcessing} onChange={e => setNewItem({...newItem, requiresProcessing: e.target.checked})} />
+                <span className="text-sm">需要加工</span>
+              </div>
+              {newItem.requiresProcessing && (
+                <div>
+                  <label className="text-sm font-medium text-slate-600">加工天數</label>
+                  <input type="number" value={newItem.defaultProcessingDays} onChange={e => setNewItem({...newItem, defaultProcessingDays: e.target.value})} className="w-full border p-3 rounded-xl mt-1" />
+                </div>
+              )}
+            </div>
+            <div className="flex gap-3 mt-8">
+              <button onClick={() => setIsAddItemModalOpen(false)} className="flex-1 py-3 border rounded-xl">取消</button>
+              <button onClick={handleAddItem} className="flex-1 py-3 bg-rose-600 text-white rounded-xl">確認新增</button>
             </div>
           </div>
         </div>

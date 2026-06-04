@@ -632,8 +632,6 @@ function App() {
             We will handle wigs with care during cleaning. However, the company is not liable for damage or loss caused by natural disasters or other events beyond our control.<br>
             本公司在為客人清洗假髮時會小心處理；但若因天災或其他不可抗力之事由導致損壞或遺失，本公司概不負責。
           </div>
-
-          <div class="thankyou">Thank you for your business!</div>
         </body>
       </html>
     `);

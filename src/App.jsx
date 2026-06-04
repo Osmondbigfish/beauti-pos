@@ -752,7 +752,7 @@ function App() {
     setTimeout(() => printWindow.print(), 300);
   };
 
-    const printInvoice = (transaction) => {
+      const printInvoice = (transaction) => {
     if (!transaction) return;
     const printWindow = window.open('', '_blank');
     if (!printWindow) return alert('請允許彈出視窗使用列印功能');
@@ -762,33 +762,33 @@ function App() {
         <head>
           <title>Invoice - ${transaction.invoiceNumber}</title>
           <style>
-            @media print { @page { size: A5 portrait; margin: 6mm; } }
-            body { font-family: "Noto Sans TC", "PingFang TC", system-ui, sans-serif; padding: 8mm; line-height: 1.55; font-size: 11px; color: #374151; }
-            .header { text-align: center; margin-bottom: 8px; }
-            table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 10.5px; }
-            th, td { padding: 7px 8px; border-bottom: 1px solid #f1f5f9; }
+            @media print { @page { size: A5 portrait; margin: 4mm; } }
+            body { font-family: "Noto Sans TC", "PingFang TC", system-ui, sans-serif; padding: 5mm; line-height: 1.45; font-size: 11px; color: #374151; }
+            .header { text-align: center; margin-bottom: 4px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 10.5px; }
+            th, td { padding: 6px 6px; border-bottom: 1px solid #f1f5f9; }
             th { background: #f8fafc; font-weight: 600; }
-            .total { text-align: right; font-size: 11px; }
-            .terms { margin-top: 12px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 8.5px; line-height: 1.4; color: #4b5563; }
-            .thankyou { text-align: right; font-size: 12px; color: #6b7280; margin-top: 10px; }
+            .total-section { text-align: right; font-size: 11px; margin-bottom: 8px; line-height: 1.6; }
+            .terms { margin-top: 28px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 8.5px; line-height: 1.35; color: #4b5563; }
+            .thankyou { text-align: right; font-size: 11px; color: #6b7280; margin-top: 8px; }
           </style>
         </head>
         <body>
           <div class="header">
-            <img src="/logo.png" style="height:145px; margin-bottom:6px;" />
-            <div style="font-size:22px; font-weight:700;">INVOICE</div>
+            <img src="/logo.png" style="height:135px; margin-bottom:2px;" />
+            <div style="font-size:21px; font-weight:700;">INVOICE</div>
           </div>
 
-          <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:10.5px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:10px;">
             <div>
-              <strong style="font-size:9.5px; color:#6b7280;">BILLED TO</strong><br>
+              <strong style="font-size:9px; color:#6b7280;">BILLED TO</strong><br>
               ${transaction.customerName || '客戶'}<br>
               ${transaction.customerPhone || ''}
             </div>
             <div style="text-align:right;">
-              <strong style="font-size:9.5px; color:#6b7280;">INVOICE NO</strong><br>
+              <strong style="font-size:9px; color:#6b7280;">INVOICE NO</strong><br>
               ${transaction.invoiceNumber}<br>
-              <strong style="font-size:9.5px; color:#6b7280;">DATE</strong><br>
+              <strong style="font-size:9px; color:#6b7280;">DATE</strong><br>
               ${transaction.date}
             </div>
           </div>
@@ -820,12 +820,12 @@ function App() {
             </tbody>
           </table>
 
-          <div class="total">
-            小計：HK$${transaction.subtotal}<br>
-            ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
-            <strong style="font-size:14px;">總金額：HK$${transaction.total}</strong><br>
-            支付方式：${transaction.paymentMethod}
-            ${transaction.pickupDate ? `<br>→ 預計取貨日期：${transaction.pickupDate}` : ''}
+          <!-- 總金額區域（移除小計 + 對齊統一） -->
+          <div class="total-section">
+            <div>總金額：               HK$${transaction.total}</div>
+            <div>支付方式：             ${transaction.paymentMethod}</div>
+            ${transaction.pickupDate ? `<div>→ 預計取貨日期：       ${transaction.pickupDate}</div>` : ''}
+            ${transaction.discount > 0 ? `<div>折扣：                 -HK$${transaction.discount}</div>` : ''}
           </div>
 
           <!-- 條款區域 -->
@@ -842,6 +842,8 @@ function App() {
             We will handle wigs with care during cleaning. However, the company is not liable for damage or loss caused by natural disasters or other events beyond our control.<br>
             本公司在為客人清洗假髮時會小心處理；但若因天災或其他不可抗力之事由導致損壞或遺失，本公司概不負責。
           </div>
+
+          <div class="thankyou">Thank you for your business!</div>
         </body>
       </html>
     `);

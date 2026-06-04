@@ -863,8 +863,8 @@ function App() {
     window.open(whatsappUrl, '_blank');
   };
 
-    const generateReceiptPDF = async (transaction) => {
-    const margin = 6;
+      const generateReceiptPDF = async (transaction) => {
+    const margin = 4;
     const pageWidth = 148;
     const contentWidth = pageWidth - (margin * 2);
 
@@ -872,13 +872,11 @@ function App() {
     tempDiv.style.position = 'absolute';
     tempDiv.style.left = '-9999px';
     tempDiv.style.width = `${contentWidth}mm`;
-    tempDiv.style.padding = '6mm';
+    tempDiv.style.padding = '4mm 5mm';
     tempDiv.style.background = '#ffffff';
-    tempDiv.style.border = '1px solid #d1d5db';
-    tempDiv.style.borderRadius = '3px';
     tempDiv.style.fontFamily = '"Noto Sans TC", "PingFang TC", system-ui, sans-serif';
     tempDiv.style.fontSize = '11px';
-    tempDiv.style.lineHeight = '1.5';
+    tempDiv.style.lineHeight = '1.45';
     tempDiv.style.color = '#374151';
 
     let itemsHTML = '';
@@ -889,41 +887,41 @@ function App() {
       const itemPrice = item.selectedVariant ? item.selectedVariant.price : item.price;
       itemsHTML += `
         <tr style="border-bottom:1px solid #f1f5f9;">
-          <td style="padding:7px 8px;">${displayName}</td>
-          <td style="padding:7px 8px; text-align:center;">${item.qty}</td>
-          <td style="padding:7px 8px; text-align:right;">HK$${itemPrice}</td>
-          <td style="padding:7px 8px; text-align:right;">HK$${(itemPrice * item.qty).toFixed(0)}</td>
+          <td style="padding:6px 6px;">${displayName}</td>
+          <td style="padding:6px 6px; text-align:center;">${item.qty}</td>
+          <td style="padding:6px 6px; text-align:right;">HK$${itemPrice}</td>
+          <td style="padding:6px 6px; text-align:right;">HK$${(itemPrice * item.qty).toFixed(0)}</td>
         </tr>
       `;
     });
 
     tempDiv.innerHTML = `
-      <div style="text-align:center; margin-bottom:8px">
-        <img src="/logo.png" style="height:120px; margin-bottom:6px; display:block; margin-left:auto; margin-right:auto;" />
+      <div style="text-align:center; margin-bottom:4px">
+        <img src="/logo.png" style="height:120px; margin-bottom:2px; display:block; margin-left:auto; margin-right:auto;" />
         <div style="font-size:20px; font-weight:700;">RECEIPT</div>
       </div>
 
-      <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:10.5px;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:10px;">
         <div>
-          <strong style="font-size:9.5px; color:#6b7280;">BILLED TO</strong><br>
+          <strong style="font-size:9px; color:#6b7280;">BILLED TO</strong><br>
           ${transaction.customerName || '客戶'}<br>
           ${transaction.customerPhone || ''}
         </div>
         <div style="text-align:right;">
-          <strong style="font-size:9.5px; color:#6b7280;">RECEIPT NO</strong><br>
+          <strong style="font-size:9px; color:#6b7280;">RECEIPT NO</strong><br>
           ${transaction.invoiceNumber}<br>
-          <strong style="font-size:9.5px; color:#6b7280;">DATE</strong><br>
+          <strong style="font-size:9px; color:#6b7280;">DATE</strong><br>
           ${transaction.date} ${transaction.time}
         </div>
       </div>
 
-      <table style="width:100%; border-collapse:collapse; margin-bottom:12px; font-size:10.5px;">
+      <table style="width:100%; border-collapse:collapse; margin-bottom:10px; font-size:10.5px;">
         <thead>
           <tr style="background:#f8fafc; border-bottom:1px solid #e5e7eb;">
-            <th style="padding:7px 8px; text-align:left; font-weight:600;">項目</th>
-            <th style="padding:7px 8px; text-align:center; width:9%;">數量</th>
-            <th style="padding:7px 8px; text-align:right; width:14%;">單價</th>
-            <th style="padding:7px 8px; text-align:right; width:14%;">小計</th>
+            <th style="padding:6px 6px; text-align:left; font-weight:600;">項目</th>
+            <th style="padding:6px 6px; text-align:center; width:9%;">數量</th>
+            <th style="padding:6px 6px; text-align:right; width:14%;">單價</th>
+            <th style="padding:6px 6px; text-align:right; width:14%;">小計</th>
           </tr>
         </thead>
         <tbody>
@@ -931,16 +929,16 @@ function App() {
         </tbody>
       </table>
 
-      <div style="text-align:right; font-size:11px; margin-bottom:12px;">
-        小計：HK$${transaction.subtotal}<br>
-        ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
-        <strong style="font-size:14px;">總金額：HK$${transaction.total}</strong><br>
-        支付方式：${transaction.paymentMethod}
-        ${transaction.pickupDate ? `<br>→ 預計取貨日期：${transaction.pickupDate}` : ''}
+      <!-- 總金額區域（移除小計 + 對齊統一） -->
+      <div style="text-align:right; font-size:11px; margin-bottom:8px; line-height:1.6;">
+        <div>總金額：               HK$${transaction.total}</div>
+        <div>支付方式：             ${transaction.paymentMethod}</div>
+        ${transaction.pickupDate ? `<div>→ 預計取貨日期：       ${transaction.pickupDate}</div>` : ''}
+        ${transaction.discount > 0 ? `<div>折扣：                 -HK$${transaction.discount}</div>` : ''}
       </div>
 
-      <!-- 條款區域 -->
-      <div style="margin-top:12px; padding-top:8px; border-top:1px solid #e5e7eb; font-size:8.5px; line-height:1.4; color:#4b5563;">
+      <!-- 條款區域（增加上方空白） -->
+      <div style="margin-top:28px; padding-top:8px; border-top:1px solid #e5e7eb; font-size:8.5px; line-height:1.35; color:#4b5563;">
         <strong style="font-size:9px;">取貨期限 / Collection Period</strong><br>
         Please collect your goods within three months from the order date. Uncollected items after this period will be void.<br>
         請於本訂單日期起三個月內憑單取回假髮；逾期未取者，該物品視作作廢。<br><br>
@@ -953,6 +951,10 @@ function App() {
         We will handle wigs with care during cleaning. However, the company is not liable for damage or loss caused by natural disasters or other events beyond our control.<br>
         本公司在為客人清洗假髮時會小心處理；但若因天災或其他不可抗力之事由導致損壞或遺失，本公司概不負責。
       </div>
+
+      <div style="text-align:right; font-size:11px; color:#6b7280; margin-top:8px;">
+        Thank you for your business!
+      </div>
     `;
 
     document.body.appendChild(tempDiv);
@@ -960,7 +962,12 @@ function App() {
     const canvas = await html2canvas(tempDiv, { scale: 3.5, backgroundColor: '#ffffff' });
     const imgData = canvas.toDataURL('image/png');
 
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [148, 210] });
+    const pdf = new jsPDF({ 
+      orientation: 'portrait', 
+      unit: 'mm', 
+      format: [148, 210] 
+    });
+
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 

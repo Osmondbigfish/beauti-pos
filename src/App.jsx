@@ -42,12 +42,17 @@ const paymentMethods = [
   { id: 'octopus', label: '八達通', icon: CreditCard },
 ];
 
+const channelOptions = [
+  "Google", "Facebook", "Whatsapp", "朋友介紹", "醫生介紹", "醫院介紹", "報紙", "其他"
+];
+
 function App() {
   const [activeTab, setActiveTab] = useState('sales');
   const [items, setItems] = useState(initialItems);
   const [cart, setCart] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('全部');
+  const [activeCategory, setActiveCategory] = useState('全部'); // 新增：動態分類 Tab
   const [discountPercent, setDiscountPercent] = useState(0);
   const [transactions, setTransactions] = useState([]);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -99,6 +104,11 @@ function App() {
   const [discountAmount, setDiscountAmount] = useState(0);
   const [adjustment, setAdjustment] = useState(0);
 
+  // 新增：結帳時的客戶名稱 + 電話 + 渠道
+  const [checkoutCustomerName, setCheckoutCustomerName] = useState('');
+  const [checkoutCustomerPhone, setCheckoutCustomerPhone] = useState('');
+  const [checkoutChannel, setCheckoutChannel] = useState('');
+
   // localStorage
   useEffect(() => {
     const savedItems = localStorage.getItem('pos_items');
@@ -126,6 +136,14 @@ function App() {
 
   const finalTotal = subtotal - discountAmount + adjustment;
 
+  // 動態取得所有分類（根據產品實際 category）
+  const getAllCategories = () => {
+    const cats = items.map(item => item.category).filter(Boolean);
+    return ['全部', ...new Set(cats)];
+  };
+
+  const allCategories = getAllCategories();
+
   // 排序：常用項目排前面
   const sortedItems = [...items].sort((a, b) => {
     if (a.isPopular && !b.isPopular) return -1;
@@ -133,9 +151,34 @@ function App() {
     return 0;
   });
 
+  // 根據 activeCategory 過濾商品
   const filteredItems = sortedItems
-    .filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-                    (categoryFilter === '全部' || item.category === categoryFilter));
+    .filter(item => {
+      const matchSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchCategory = activeCategory === '全部' || item.category === activeCategory;
+      return matchSearch && matchCategory;
+    });
+
+  // 計算銷售數據
+  const getSalesSummary = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const thisMonth = today.slice(0, 7); // YYYY-MM
+
+    const todayTx = transactions.filter(tx => tx.date === today);
+    const monthTx = transactions.filter(tx => tx.date.startsWith(thisMonth));
+
+    const todayTotal = todayTx.reduce((sum, tx) => sum + tx.total, 0);
+    const monthTotal = monthTx.reduce((sum, tx) => sum + tx.total, 0);
+
+    return {
+      todayTotal,
+      monthTotal,
+      todayCount: todayTx.length,
+      monthCount: monthTx.length
+    };
+  };
+
+  const salesSummary = getSalesSummary();
 
   // 預約相關函數
   const getAppointmentsForDate = (date) => {
@@ -447,6 +490,9 @@ function App() {
     setPickupDate(''); 
     setDiscountAmount(0);
     setAdjustment(0);
+    setCheckoutCustomerName('');
+    setCheckoutCustomerPhone('');
+    setCheckoutChannel('');
   };
 
   const showToast = (message, type = 'success') => {
@@ -467,7 +513,7 @@ function App() {
     return invoiceNumber;
   };
 
-  // 新增：匯出客戶消費記錄 CSV（每筆消費一列）
+  // 匯出客戶消費記錄 CSV
   const exportCustomersTransactionsCSV = () => {
     if (transactions.length === 0) {
       showToast('目前沒有消費記錄可匯出', 'error');
@@ -493,7 +539,8 @@ function App() {
         '調整金額': tx.adjustment || 0,
         '總金額': tx.total,
         '支付方式': tx.paymentMethod,
-        '預計取貨日期': tx.pickupDate || '-'
+        '預計取貨日期': tx.pickupDate || '-',
+        '來源渠道': tx.channel || '-'
       };
     });
 
@@ -507,7 +554,7 @@ function App() {
     showToast(`已成功匯出 ${transactions.length} 筆消費記錄`, 'success');
   };
 
-  // 新增：匯入客戶消費記錄 CSV（重複則取代 + 自動新增客戶）
+  // 匯入客戶消費記錄 CSV
   const importCustomersTransactionsCSV = () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -542,7 +589,6 @@ function App() {
             const invoiceNumber = row['發票編號'] || row['Invoice Number'] || '';
             if (!invoiceNumber) continue;
 
-            // 處理客戶
             let customerName = row['客戶姓名'] || row['Customer Name'] || '';
             let customerPhone = row['電話'] || row['Phone'] || '';
 
@@ -561,7 +607,6 @@ function App() {
               newCustomersCount++;
             }
 
-            // 建立 transaction 物件
             const newTx = {
               id: Date.now() + i,
               invoiceNumber: invoiceNumber,
@@ -577,10 +622,10 @@ function App() {
               customerName: customerName || null,
               customerPhone: customerPhone || null,
               pickupDate: row['預計取貨日期'] || null,
+              channel: row['來源渠道'] || null,
               company: companyInfo
             };
 
-            // 檢查是否已存在相同發票編號
             const existingIndex = newTransactions.findIndex(tx => tx.invoiceNumber === invoiceNumber);
             if (existingIndex !== -1) {
               newTransactions[existingIndex] = newTx;
@@ -611,9 +656,9 @@ function App() {
     setSelectedPayment('cash');
     setPaidAmount(finalTotal.toString());
     setCheckoutError('');
-    setCustomerSearchTerm('');
-    setSelectedCustomerForCheckout(null);
-    setShowCustomerSuggestions(false);
+    setCheckoutCustomerName('');
+    setCheckoutCustomerPhone('');
+    setCheckoutChannel('');
     setPickupDate('');
     setDiscountAmount(0);
     setAdjustment(0);
@@ -631,6 +676,24 @@ function App() {
 
     const invoiceNumber = generateInvoiceNumber();
 
+    // 自動新增客戶（如果有輸入姓名）
+    let finalCustomerName = checkoutCustomerName.trim();
+    let finalCustomerPhone = checkoutCustomerPhone.trim();
+
+    if (finalCustomerName) {
+      const exists = customers.some(c => 
+        c.name === finalCustomerName && c.phone === finalCustomerPhone
+      );
+      if (!exists) {
+        const newCust = {
+          id: Date.now(),
+          name: finalCustomerName,
+          phone: finalCustomerPhone
+        };
+        setCustomers(prev => [...prev, newCust]);
+      }
+    }
+
     const newTransaction = {
       id: Date.now(),
       invoiceNumber,
@@ -643,9 +706,10 @@ function App() {
       total: finalTotal,
       paymentMethod: paymentMethods.find(m => m.id === selectedPayment)?.label,
       change,
-      customerName: selectedCustomerForCheckout?.name || customerSearchTerm || null,
-      customerPhone: selectedCustomerForCheckout?.phone || null,
+      customerName: finalCustomerName || null,
+      customerPhone: finalCustomerPhone || null,
       pickupDate: pickupDate || null,
+      channel: checkoutChannel || null,
       company: companyInfo
     };
 
@@ -669,15 +733,12 @@ function App() {
 
     setTimeout(() => {
       clearCart();
-      setCustomerSearchTerm('');
-      setSelectedCustomerForCheckout(null);
     }, 300);
   };
 
   const closePaymentModal = () => { 
     setIsPaymentModalOpen(false); 
     setCheckoutError(''); 
-    setShowCustomerSuggestions(false);
   };
 
   const closeSuccessModal = () => { setIsSuccessModalOpen(false); setLastTransaction(null); };
@@ -747,15 +808,14 @@ function App() {
         </tbody>
       </table>
 
-      <!-- 總金額區域（已移除小計 + 對齊統一） -->
       <div style="text-align:right; font-size:11px; margin-bottom:8px; line-height:1.6;">
         <div>總金額：               HK$${transaction.total}</div>
         <div>支付方式：             ${transaction.paymentMethod}</div>
         ${transaction.pickupDate ? `<div>→ 預計取貨日期：       ${transaction.pickupDate}</div>` : ''}
         ${transaction.discount > 0 ? `<div>折扣：                 -HK$${transaction.discount}</div>` : ''}
+        ${transaction.channel ? `<div>來源渠道：             ${transaction.channel}</div>` : ''}
       </div>
 
-      <!-- 條款區域（增加上方空白） -->
       <div style="margin-top:28px; padding-top:8px; border-top:1px solid #e5e7eb; font-size:8.5px; line-height:1.35; color:#4b5563;">
         <strong style="font-size:9px;">取貨期限 / Collection Period</strong><br>
         Please collect your goods within three months from the order date. Uncollected items after this period will be void.<br>
@@ -861,15 +921,14 @@ function App() {
         </tbody>
       </table>
 
-      <!-- 總金額區域（移除小計 + 對齊統一） -->
       <div style="text-align:right; font-size:11px; margin-bottom:8px; line-height:1.6;">
         <div>總金額：               HK$${transaction.total}</div>
         <div>支付方式：             ${transaction.paymentMethod}</div>
         ${transaction.pickupDate ? `<div>→ 預計取貨日期：       ${transaction.pickupDate}</div>` : ''}
         ${transaction.discount > 0 ? `<div>折扣：                 -HK$${transaction.discount}</div>` : ''}
+        ${transaction.channel ? `<div>來源渠道：             ${transaction.channel}</div>` : ''}
       </div>
 
-      <!-- 條款區域（增加上方空白） -->
       <div style="margin-top:28px; padding-top:8px; border-top:1px solid #e5e7eb; font-size:8.5px; line-height:1.35; color:#4b5563;">
         <strong style="font-size:9px;">取貨期限 / Collection Period</strong><br>
         Please collect your goods within three months from the order date. Uncollected items after this period will be void.<br>
@@ -977,15 +1036,14 @@ function App() {
             </tbody>
           </table>
 
-          <!-- 總金額區域（移除小計 + 對齊統一） -->
           <div class="total-section">
             <div>總金額：               HK$${transaction.total}</div>
             <div>支付方式：             ${transaction.paymentMethod}</div>
             ${transaction.pickupDate ? `<div>→ 預計取貨日期：       ${transaction.pickupDate}</div>` : ''}
             ${transaction.discount > 0 ? `<div>折扣：                 -HK$${transaction.discount}</div>` : ''}
+            ${transaction.channel ? `<div>來源渠道：             ${transaction.channel}</div>` : ''}
           </div>
 
-          <!-- 條款區域 -->
           <div class="terms">
             <strong style="font-size:9px;">取貨期限 / Collection Period</strong><br>
             Please collect your goods within three months from the order date. Uncollected items after this period will be void.<br>
@@ -1076,15 +1134,14 @@ function App() {
             </tbody>
           </table>
 
-          <!-- 總金額區域（移除小計 + 對齊統一） -->
           <div class="total-section">
             <div>總金額：               HK$${transaction.total}</div>
             <div>支付方式：             ${transaction.paymentMethod}</div>
             ${transaction.pickupDate ? `<div>→ 預計取貨日期：       ${transaction.pickupDate}</div>` : ''}
             ${transaction.discount > 0 ? `<div>折扣：                 -HK$${transaction.discount}</div>` : ''}
+            ${transaction.channel ? `<div>來源渠道：             ${transaction.channel}</div>` : ''}
           </div>
 
-          <!-- 條款區域 -->
           <div class="terms">
             <strong style="font-size:9px;">取貨期限 / Collection Period</strong><br>
             Please collect your goods within three months from the order date. Uncollected items after this period will be void.<br>
@@ -1112,7 +1169,7 @@ function App() {
     const phone = transaction.customerPhone ? transaction.customerPhone.replace(/\s/g, '') : '';
     const hasPickup = transaction.pickupDate;
 
-    const message = `麗明珠真髮中心 訂單確認\n\n訂單編號：${transaction.invoiceNumber}\n客戶：${transaction.customerName || '尊貴客戶'}\n總金額：HK$${transaction.total}\n支付方式：${transaction.paymentMethod}\n${hasPickup ? `預計取貨日期：${transaction.pickupDate}\n` : ''}請查看附件發票。\n\n${companyInfo.name}\nTel: ${companyInfo.phone} ｜ WhatsApp: ${companyInfo.whatsapp}`;
+    const message = `麗明珠真髮中心 訂單確認\n\n訂單編號：${transaction.invoiceNumber}\n客戶：${transaction.customerName || '尊貴客戶'}\n總金額：HK$${transaction.total}\n支付方式：${transaction.paymentMethod}\n${hasPickup ? `預計取貨日期：${transaction.pickupDate}\n` : ''}${transaction.channel ? `來源渠道：${transaction.channel}\n` : ''}請查看附件發票。\n\n${companyInfo.name}\nTel: ${companyInfo.phone} ｜ WhatsApp: ${companyInfo.whatsapp}`;
 
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = phone ? `https://wa.me/${phone}?text=${encodedMessage}` : `https://wa.me/?text=${encodedMessage}`;
@@ -1148,7 +1205,8 @@ function App() {
         '調整金額': tx.adjustment || 0,
         '總金額': tx.total,
         '支付方式': tx.paymentMethod,
-        '預計取貨日期': tx.pickupDate || '-'
+        '預計取貨日期': tx.pickupDate || '-',
+        '來源渠道': tx.channel || '-'
       };
     });
 
@@ -1195,7 +1253,46 @@ function App() {
         {activeTab === 'sales' && (
           <div className="flex gap-6">
             <div className="flex-1">
-              <h2 className="text-2xl font-semibold mb-4">商品與服務</h2>
+              {/* 銷售數據摘要 */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-white border rounded-2xl p-4">
+                  <div className="text-sm text-slate-500">今日銷售額</div>
+                  <div className="text-3xl font-bold text-emerald-600 mt-1">HK${salesSummary.todayTotal}</div>
+                </div>
+                <div className="bg-white border rounded-2xl p-4">
+                  <div className="text-sm text-slate-500">今日訂單數</div>
+                  <div className="text-3xl font-bold mt-1">{salesSummary.todayCount}</div>
+                </div>
+                <div className="bg-white border rounded-2xl p-4">
+                  <div className="text-sm text-slate-500">本月銷售額</div>
+                  <div className="text-3xl font-bold text-emerald-600 mt-1">HK${salesSummary.monthTotal}</div>
+                </div>
+                <div className="bg-white border rounded-2xl p-4">
+                  <div className="text-sm text-slate-500">本月訂單數</div>
+                  <div className="text-3xl font-bold mt-1">{salesSummary.monthCount}</div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-semibold">商品與服務</h2>
+              </div>
+
+              {/* 動態分類 Tab */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {allCategories.map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setActiveCategory(cat)}
+                    className={`px-5 py-2 rounded-full text-sm font-medium transition-all border
+                      ${activeCategory === cat 
+                        ? 'bg-rose-600 text-white border-rose-600' 
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-rose-300'}`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredItems.map(item => (
                   <div key={item.id} onClick={() => addToCart(item)} className="bg-white border rounded-2xl p-4 cursor-pointer hover:border-rose-300 transition-all hover:shadow-sm relative">
@@ -1214,7 +1311,7 @@ function App() {
                 ))}
               </div>
 
-              {/* 今日預約摘要 */}
+              {/* 今日預約摘要（已修正） */}
               <div className="mt-8">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-xl font-semibold">今日預約</h3>
@@ -1228,7 +1325,9 @@ function App() {
                           <span className="font-medium">{apt.customerName}</span>
                           <span className="text-slate-500 ml-2">({apt.time})</span>
                         </div>
-                        <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full">{apt.status}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${apt.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                          {apt.status}
+                        </span>
                       </div>
                     ))
                   ) : (
@@ -1358,6 +1457,7 @@ function App() {
                       <th>顧客</th>
                       <th className="text-right">金額</th>
                       <th>支付方式</th>
+                      <th>來源渠道</th>
                       <th className="text-center w-40">操作</th>
                     </tr>
                   </thead>
@@ -1376,6 +1476,7 @@ function App() {
                           <td>{tx.customerName || '-'}</td>
                           <td className="text-right font-semibold">HK${tx.total}</td>
                           <td><span className="text-xs px-3 py-1 bg-slate-100 rounded-full">{tx.paymentMethod}</span></td>
+                          <td className="text-xs text-slate-500">{tx.channel || '-'}</td>
                           <td className="text-center">
                             <div className="flex justify-center gap-2">
                               <button onClick={() => generateReceiptPDF(tx)} className="text-xs px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg">Receipt</button>
@@ -1550,40 +1651,61 @@ function App() {
       </div>
             {/* ==================== 所有 Modal ==================== */}
 
-      {/* Payment Modal */}
+      {/* Payment Modal - 已更新為兩欄客戶 + 渠道 */}
       {isPaymentModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={closePaymentModal}>
           <div className="bg-white rounded-3xl p-8 w-full max-w-md" onClick={e => e.stopPropagation()}>
             <h2 className="text-2xl font-bold mb-4">確認付款</h2>
             <p className="text-4xl font-bold mb-6">HK${finalTotal}</p>
 
-            <div className="mb-4">
-              <label className="text-sm font-medium text-slate-600 block mb-2">所屬客戶（選填）</label>
-              <div className="relative">
-                <input type="text" value={customerSearchTerm} onChange={(e) => { setCustomerSearchTerm(e.target.value); setSelectedCustomerForCheckout(null); setShowCustomerSuggestions(true); }} onFocus={() => setShowCustomerSuggestions(true)} placeholder="輸入客戶姓名或電話..." className="w-full border p-3 rounded-xl focus:border-rose-400" />
-                {showCustomerSuggestions && customerSuggestions.length > 0 && (
-                  <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-2xl shadow-lg max-h-48 overflow-auto">
-                    {customerSuggestions.map((customer, index) => (
-                      <div key={index} onClick={() => selectCustomer(customer)} className="px-4 py-3 hover:bg-rose-50 cursor-pointer border-b last:border-none">
-                        <div className="font-medium">{customer.name}</div>
-                        {customer.phone && <div className="text-xs text-slate-500">{customer.phone}</div>}
-                      </div>
-                    ))}
-                  </div>
-                )}
+            {/* 客戶名稱 + 客戶聯絡號碼 */}
+            <div className="mb-4 grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium text-slate-600 block mb-1">客戶名稱</label>
+                <input 
+                  type="text" 
+                  value={checkoutCustomerName} 
+                  onChange={(e) => setCheckoutCustomerName(e.target.value)} 
+                  className="w-full border p-3 rounded-xl" 
+                  placeholder="例如：陳小姐" 
+                />
               </div>
-              {selectedCustomerForCheckout && <div className="mt-2 text-sm text-emerald-600">已選擇：{selectedCustomerForCheckout.name}</div>}
+              <div>
+                <label className="text-sm font-medium text-slate-600 block mb-1">客戶聯絡號碼</label>
+                <input 
+                  type="text" 
+                  value={checkoutCustomerPhone} 
+                  onChange={(e) => setCheckoutCustomerPhone(e.target.value)} 
+                  className="w-full border p-3 rounded-xl" 
+                  placeholder="例如：9123 4567" 
+                />
+              </div>
+            </div>
+
+            {/* 來自渠道 */}
+            <div className="mb-4">
+              <label className="text-sm font-medium text-slate-600 block mb-1">來自渠道（選填）</label>
+              <select 
+                value={checkoutChannel} 
+                onChange={(e) => setCheckoutChannel(e.target.value)} 
+                className="w-full border p-3 rounded-xl"
+              >
+                <option value="">請選擇渠道</option>
+                {channelOptions.map((ch, index) => (
+                  <option key={index} value={ch}>{ch}</option>
+                ))}
+              </select>
             </div>
 
             {/* 預計取貨日期 */}
             <div className="mb-4">
-              <label className="text-sm font-medium text-slate-600 block mb-2">預計取貨日期（選填）</label>
+              <label className="text-sm font-medium text-slate-600 block mb-1">預計取貨日期（選填）</label>
               <input type="date" value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} className="w-full border p-3 rounded-xl" />
             </div>
 
             {/* 折扣金額 */}
             <div className="mb-4">
-              <label className="text-sm font-medium text-slate-600 block mb-2">折扣金額（選填）</label>
+              <label className="text-sm font-medium text-slate-600 block mb-1">折扣金額（選填）</label>
               <input 
                 type="number" 
                 value={discountAmount} 
@@ -1593,9 +1715,9 @@ function App() {
               />
             </div>
 
-            {/* 調整金額（內部使用） */}
+            {/* 調整金額 */}
             <div className="mb-4">
-              <label className="text-sm font-medium text-slate-600 block mb-2">調整金額（內部使用，不顯示給客戶）</label>
+              <label className="text-sm font-medium text-slate-600 block mb-1">調整金額（內部使用）</label>
               <input 
                 type="number" 
                 value={adjustment} 

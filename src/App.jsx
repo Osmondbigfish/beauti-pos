@@ -80,7 +80,7 @@ function App() {
   const [newAppointment, setNewAppointment] = useState({
     customerName: '', phone: '', date: '', time: '', notes: ''
   });
-  const [isWhatsAppConfirmOpen, setIsWhatsAppConfirmOpen] = useState(false);
+  const [{/* WhatsApp 確認 Modal */}, set{/* WhatsApp 確認 Modal */}] = useState(false);
   const [pendingAppointment, setPendingAppointment] = useState(null);
 
   // ==================== localStorage 同步 ====================
@@ -196,7 +196,7 @@ function App() {
     setAppointments(prev => [...prev, appointment]);
     setIsAddAppointmentModalOpen(false);
     setPendingAppointment(appointment);
-    setIsWhatsAppConfirmOpen(true);
+    set{/* WhatsApp 確認 Modal */}(true);
     showToast('預約已成功新增', 'success');
   };
 
@@ -209,12 +209,12 @@ function App() {
       : `https://wa.me/?text=${encodedMessage}`;
     
     window.open(whatsappUrl, '_blank');
-    setIsWhatsAppConfirmOpen(false);
+    set{/* WhatsApp 確認 Modal */}(false);
     setPendingAppointment(null);
   };
 
   const skipWhatsApp = () => {
-    setIsWhatsAppConfirmOpen(false);
+    set{/* WhatsApp 確認 Modal */}(false);
     setPendingAppointment(null);
   };
 

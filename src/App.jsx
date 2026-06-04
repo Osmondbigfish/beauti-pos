@@ -81,7 +81,14 @@ function App() {
 
   // 預約功能
   const [appointments, setAppointments] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Hong_Kong',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date())
+);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isAddAppointmentModalOpen, setIsAddAppointmentModalOpen] = useState(false);
   const [newAppointment, setNewAppointment] = useState({
@@ -189,9 +196,16 @@ function App() {
     return appointments.some(a => a.date === date && a.time === time);
   };
 
+  // 使用香港時間取得今天日期
   const getTodayAppointments = () => {
-    const today = new Date().toISOString().split('T')[0];
-    return getAppointmentsForDate(today);
+    const hkToday = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Hong_Kong',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(new Date());
+    
+    return getAppointmentsForDate(hkToday);
   };
 
   const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();

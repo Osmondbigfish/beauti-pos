@@ -63,8 +63,6 @@ function App() {
   const [newCustomer, setNewCustomer] = useState({ name: '', phone: '' });
 
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
-  const [isEditItemModalOpen, setIsEditItemModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
   const [newItem, setNewItem] = useState({
     name: '', price: '', type: 'product', category: '', requiresProcessing: false, defaultProcessingDays: 4, stock: ''
   });
@@ -72,7 +70,6 @@ function App() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  // ==================== 預約功能狀態 ====================
   const [appointments, setAppointments] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -80,10 +77,11 @@ function App() {
   const [newAppointment, setNewAppointment] = useState({
     customerName: '', phone: '', date: '', time: '', notes: ''
   });
-const [isWhatsAppConfirmOpen, setIsWhatsAppConfirmOpen] = useState(false);
-const [pendingAppointment, setPendingAppointment] = useState(null);
+  const [isWhatsAppConfirmOpen, setIsWhatsAppConfirmOpen] = useState(false);
+  const [pendingAppointment, setPendingAppointment] = useState(null);
+  const [isEditItemModalOpen, setIsEditItemModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
 
-  // ==================== localStorage 同步 ====================
   useEffect(() => {
     const savedItems = localStorage.getItem('pos_items');
     if (savedItems) setItems(JSON.parse(savedItems));
@@ -103,7 +101,6 @@ const [pendingAppointment, setPendingAppointment] = useState(null);
   useEffect(() => { localStorage.setItem('pos_customers', JSON.stringify(customers)); }, [customers]);
   useEffect(() => { localStorage.setItem('pos_appointments', JSON.stringify(appointments)); }, [appointments]);
 
-  // ==================== 計算屬性 ====================
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
   const discountAmount = Math.round(subtotal * (discountPercent / 100));
   const total = Math.max(0, subtotal - discountAmount);
@@ -113,7 +110,6 @@ const [pendingAppointment, setPendingAppointment] = useState(null);
                     (categoryFilter === '全部' || item.category === categoryFilter))
     .sort((a, b) => a.type === b.type ? a.name.localeCompare(b.name, 'zh-HK') : (a.type === 'product' ? -1 : 1));
 
-  // ==================== 預約相關函數 ====================
   const getAppointmentsForDate = (date) => {
     return appointments.filter(a => a.date === date).sort((a, b) => a.time.localeCompare(b.time));
   };
@@ -127,7 +123,6 @@ const [pendingAppointment, setPendingAppointment] = useState(null);
     return getAppointmentsForDate(today);
   };
 
-  // ==================== 月曆相關函數 ====================
   const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
   const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
 
@@ -164,7 +159,6 @@ const [pendingAppointment, setPendingAppointment] = useState(null);
     setSelectedDate(dateStr);
   };
 
-  // ==================== 新增預約 ====================
   const openAddAppointment = () => {
     setNewAppointment({
       customerName: '',
@@ -196,7 +190,7 @@ const [pendingAppointment, setPendingAppointment] = useState(null);
     setAppointments(prev => [...prev, appointment]);
     setIsAddAppointmentModalOpen(false);
     setPendingAppointment(appointment);
-    set{/* WhatsApp 確認 Modal */}(true);
+    setIsWhatsAppConfirmOpen(true);
     showToast('預約已成功新增', 'success');
   };
 
@@ -209,12 +203,12 @@ const [pendingAppointment, setPendingAppointment] = useState(null);
       : `https://wa.me/?text=${encodedMessage}`;
     
     window.open(whatsappUrl, '_blank');
-    set{/* WhatsApp 確認 Modal */}(false);
+    setIsWhatsAppConfirmOpen(false);
     setPendingAppointment(null);
   };
 
   const skipWhatsApp = () => {
-    set{/* WhatsApp 確認 Modal */}(false);
+    setIsWhatsAppConfirmOpen(false);
     setPendingAppointment(null);
   };
 
@@ -231,7 +225,6 @@ const [pendingAppointment, setPendingAppointment] = useState(null);
     }
   };
 
-  // ==================== 其他原有函數 ====================
   const getAllCustomersForSearch = () => {
     const map = new Map();
     customers.forEach(c => {
@@ -302,37 +295,6 @@ const [pendingAppointment, setPendingAppointment] = useState(null);
   };
 
   const handleAddItem = () => {
-    // 開啟編輯商品 Modal
-const openEditItemModal = (item) => {
-  setEditingItem({ ...item });
-  setIsEditItemModalOpen(true);
-};
-
-// 儲存編輯後的商品
-const handleEditItem = () => {
-  if (!editingItem.name || !editingItem.price || !editingItem.category) {
-    showToast('請填寫名稱、價格與類別', 'error');
-    return;
-  }
-
-  setItems(prev =>
-    prev.map(item =>
-      item.id === editingItem.id ? { ...editingItem } : item
-    )
-  );
-
-  setIsEditItemModalOpen(false);
-  setEditingItem(null);
-  showToast('商品/服務已更新！', 'success');
-};
-
-// 刪除商品
-const deleteItem = (id) => {
-  if (window.confirm('確定要刪除此商品/服務嗎？')) {
-    setItems(prev => prev.filter(item => item.id !== id));
-    showToast('商品/服務已刪除', 'success');
-  }
-};
     if (!newItem.name || !newItem.price || !newItem.category) {
       showToast('請填寫名稱、價格與類別', 'error');
       return;
@@ -353,6 +315,35 @@ const deleteItem = (id) => {
     setItems(prev => [...prev, newProduct]);
     setIsAddItemModalOpen(false);
     showToast('商品/服務已成功新增！', 'success');
+  };
+
+  const openEditItemModal = (item) => {
+    setEditingItem({ ...item });
+    setIsEditItemModalOpen(true);
+  };
+
+  const handleEditItem = () => {
+    if (!editingItem.name || !editingItem.price || !editingItem.category) {
+      showToast('請填寫名稱、價格與類別', 'error');
+      return;
+    }
+
+    setItems(prev =>
+      prev.map(item =>
+        item.id === editingItem.id ? { ...editingItem } : item
+      )
+    );
+
+    setIsEditItemModalOpen(false);
+    setEditingItem(null);
+    showToast('商品/服務已更新！', 'success');
+  };
+
+  const deleteItem = (id) => {
+    if (window.confirm('確定要刪除此商品/服務嗎？')) {
+      setItems(prev => prev.filter(item => item.id !== id));
+      showToast('商品/服務已刪除', 'success');
+    }
   };
 
   const addToCart = (item) => {
@@ -488,6 +479,7 @@ const deleteItem = (id) => {
   };
 
   const closeSuccessModal = () => { setIsSuccessModalOpen(false); setLastTransaction(null); };
+
   const printReceipt = (transaction) => {
     if (!transaction) return;
     const printWindow = window.open('', '_blank');
@@ -865,7 +857,6 @@ const deleteItem = (id) => {
     showToast(`已成功匯出 ${filteredTransactions.length} 筆訂單`, 'success');
   };
 
-  // ==================== 主畫面 JSX 開始 ====================
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white border-b sticky top-0 z-40">
@@ -987,50 +978,43 @@ const deleteItem = (id) => {
             </div>
             <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
               <table className="pos-table w-full">
-  <thead>
-    <tr>
-      <th>名稱</th>
-      <th>類型</th>
-      <th>類別</th>
-      <th className="text-right">單價</th>
-      <th className="text-right w-40">庫存 / 時長</th>
-      <th className="text-center w-32">操作</th>
-    </tr>
-  </thead>
-  <tbody>
-    {items.map(item => (
-      <tr key={item.id}>
-        <td className="font-medium">{item.name}</td>
-        <td>
-          <span className={`inline-block px-3 py-0.5 text-xs rounded-full ${item.type === 'product' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
-            {item.type === 'product' ? '商品' : '服務'}
-          </span>
-        </td>
-        <td className="text-slate-500">{item.category}</td>
-        <td className="text-right font-mono">HK${item.price}</td>
-        <td className="text-right">
-          {item.type === 'product' ? <span className="font-mono">{item.stock}</span> : <span className="text-emerald-600 font-medium">{item.duration}</span>}
-        </td>
-        <td className="text-center">
-          <div className="flex justify-center gap-2">
-            <button 
-              onClick={() => openEditItemModal(item)} 
-              className="text-xs px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200"
-            >
-              編輯
-            </button>
-            <button 
-              onClick={() => deleteItem(item.id)} 
-              className="text-xs px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200"
-            >
-              刪除
-            </button>
+                <thead>
+                  <tr>
+                    <th>名稱</th>
+                    <th>類型</th>
+                    <th>類別</th>
+                    <th className="text-right">單價</th>
+                    <th className="text-right w-40">庫存 / 時長</th>
+                    <th className="text-center w-32">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map(item => (
+                    <tr key={item.id}>
+                      <td className="font-medium">{item.name}</td>
+                      <td>
+                        <span className={`inline-block px-3 py-0.5 text-xs rounded-full ${item.type === 'product' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                          {item.type === 'product' ? '商品' : '服務'}
+                        </span>
+                      </td>
+                      <td className="text-slate-500">{item.category}</td>
+                      <td className="text-right font-mono">HK${item.price}</td>
+                      <td className="text-right">
+                        {item.type === 'product' ? <span className="font-mono">{item.stock}</span> : <span className="text-emerald-600 font-medium">{item.duration}</span>}
+                      </td>
+                      <td className="text-center">
+                        <div className="flex justify-center gap-2">
+                          <button onClick={() => openEditItemModal(item)} className="text-xs px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200">編輯</button>
+                          <button onClick={() => deleteItem(item.id)} className="text-xs px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200">刪除</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </td>
-      </tr>
-    ))}
-  </tbody>
-</table>
+        )}
 
         {/* ==================== 訂單記錄頁面 ==================== */}
         {activeTab === 'reports' && (
@@ -1237,8 +1221,8 @@ const deleteItem = (id) => {
           </div>
         )}
       </div>
+            {/* ==================== 所有 Modal ==================== */}
 
-      {/* ==================== 所有 Modal ==================== */}
       {/* Payment Modal */}
       {isPaymentModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={closePaymentModal}>
@@ -1386,57 +1370,59 @@ const deleteItem = (id) => {
           </div>
         </div>
       )}
-{/* Edit Item Modal */}
-{isEditItemModalOpen && editingItem && (
-  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setIsEditItemModalOpen(false)}>
-    <div className="bg-white rounded-3xl p-8 w-full max-w-md" onClick={e => e.stopPropagation()}>
-      <h2 className="text-2xl font-bold mb-6">編輯商品 / 服務</h2>
-      <div className="space-y-4">
-        <div>
-          <label className="text-sm font-medium text-slate-600">名稱</label>
-          <input type="text" value={editingItem.name} onChange={e => setEditingItem({...editingItem, name: e.target.value})} className="w-full border p-3 rounded-xl mt-1" />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-sm font-medium text-slate-600">類型</label>
-            <select value={editingItem.type} onChange={e => setEditingItem({...editingItem, type: e.target.value})} className="w-full border p-3 rounded-xl mt-1">
-              <option value="product">商品</option>
-              <option value="service">服務</option>
-            </select>
+
+      {/* Edit Item Modal */}
+      {isEditItemModalOpen && editingItem && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setIsEditItemModalOpen(false)}>
+          <div className="bg-white rounded-3xl p-8 w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <h2 className="text-2xl font-bold mb-6">編輯商品 / 服務</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-slate-600">名稱</label>
+                <input type="text" value={editingItem.name} onChange={e => setEditingItem({...editingItem, name: e.target.value})} className="w-full border p-3 rounded-xl mt-1" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-slate-600">類型</label>
+                  <select value={editingItem.type} onChange={e => setEditingItem({...editingItem, type: e.target.value})} className="w-full border p-3 rounded-xl mt-1">
+                    <option value="product">商品</option>
+                    <option value="service">服務</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-600">價格</label>
+                  <input type="number" value={editingItem.price} onChange={e => setEditingItem({...editingItem, price: e.target.value})} className="w-full border p-3 rounded-xl mt-1" />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-600">類別</label>
+                <input type="text" value={editingItem.category} onChange={e => setEditingItem({...editingItem, category: e.target.value})} className="w-full border p-3 rounded-xl mt-1" />
+              </div>
+              {editingItem.type === 'product' && (
+                <div>
+                  <label className="text-sm font-medium text-slate-600">庫存</label>
+                  <input type="number" value={editingItem.stock} onChange={e => setEditingItem({...editingItem, stock: e.target.value})} className="w-full border p-3 rounded-xl mt-1" />
+                </div>
+              )}
+              <div className="flex items-center gap-3 pt-2">
+                <input type="checkbox" checked={editingItem.requiresProcessing} onChange={e => setEditingItem({...editingItem, requiresProcessing: e.target.checked})} />
+                <span className="text-sm">需要加工</span>
+              </div>
+              {editingItem.requiresProcessing && (
+                <div>
+                  <label className="text-sm font-medium text-slate-600">加工天數</label>
+                  <input type="number" value={editingItem.defaultProcessingDays} onChange={e => setEditingItem({...editingItem, defaultProcessingDays: e.target.value})} className="w-full border p-3 rounded-xl mt-1" />
+                </div>
+              )}
+            </div>
+            <div className="flex gap-3 mt-8">
+              <button onClick={() => setIsEditItemModalOpen(false)} className="flex-1 py-3 border rounded-xl">取消</button>
+              <button onClick={handleEditItem} className="flex-1 py-3 bg-rose-600 text-white rounded-xl">儲存修改</button>
+            </div>
           </div>
-          <div>
-            <label className="text-sm font-medium text-slate-600">價格</label>
-            <input type="number" value={editingItem.price} onChange={e => setEditingItem({...editingItem, price: e.target.value})} className="w-full border p-3 rounded-xl mt-1" />
-          </div>
         </div>
-        <div>
-          <label className="text-sm font-medium text-slate-600">類別</label>
-          <input type="text" value={editingItem.category} onChange={e => setEditingItem({...editingItem, category: e.target.value})} className="w-full border p-3 rounded-xl mt-1" />
-        </div>
-        {editingItem.type === 'product' && (
-          <div>
-            <label className="text-sm font-medium text-slate-600">庫存</label>
-            <input type="number" value={editingItem.stock} onChange={e => setEditingItem({...editingItem, stock: e.target.value})} className="w-full border p-3 rounded-xl mt-1" />
-          </div>
-        )}
-        <div className="flex items-center gap-3 pt-2">
-          <input type="checkbox" checked={editingItem.requiresProcessing} onChange={e => setEditingItem({...editingItem, requiresProcessing: e.target.checked})} />
-          <span className="text-sm">需要加工</span>
-        </div>
-        {editingItem.requiresProcessing && (
-          <div>
-            <label className="text-sm font-medium text-slate-600">加工天數</label>
-            <input type="number" value={editingItem.defaultProcessingDays} onChange={e => setEditingItem({...editingItem, defaultProcessingDays: e.target.value})} className="w-full border p-3 rounded-xl mt-1" />
-          </div>
-        )}
-      </div>
-      <div className="flex gap-3 mt-8">
-        <button onClick={() => setIsEditItemModalOpen(false)} className="flex-1 py-3 border rounded-xl">取消</button>
-        <button onClick={handleEditItem} className="flex-1 py-3 bg-rose-600 text-white rounded-xl">儲存修改</button>
-      </div>
-    </div>
-  </div>
-)}
+      )}
+
       {toast && <div className="fixed bottom-6 right-6 bg-slate-900 text-white px-6 py-3 rounded-2xl">{toast.message}</div>}
     </div>
   );

@@ -91,9 +91,13 @@ function App() {
   const [editingItem, setEditingItem] = useState(null);
   const [selectedCustomerForHistory, setSelectedCustomerForHistory] = useState(null);
 
-  // 變體選擇 Modal
+  // 變體選擇
   const [isVariantModalOpen, setIsVariantModalOpen] = useState(false);
   const [selectedItemForVariant, setSelectedItemForVariant] = useState(null);
+
+  // 折扣與調整
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [adjustment, setAdjustment] = useState(0);
 
   // localStorage
   useEffect(() => {
@@ -115,9 +119,12 @@ function App() {
   useEffect(() => { localStorage.setItem('pos_customers', JSON.stringify(customers)); }, [customers]);
   useEffect(() => { localStorage.setItem('pos_appointments', JSON.stringify(appointments)); }, [appointments]);
 
-  const subtotal = cart.reduce((sum, item) => sum + (item.selectedVariant ? item.selectedVariant.price : item.price) * item.qty, 0);
-  const discountAmount = Math.round(subtotal * (discountPercent / 100));
-  const total = Math.max(0, subtotal - discountAmount);
+  const subtotal = cart.reduce((sum, item) => {
+    const price = item.selectedVariant ? item.selectedVariant.price : item.price;
+    return sum + price * item.qty;
+  }, 0);
+
+  const finalTotal = subtotal - discountAmount + adjustment;
 
   // 排序：常用項目排前面
   const sortedItems = [...items].sort((a, b) => {
@@ -378,11 +385,9 @@ function App() {
   // 加入購物車（含變體處理）
   const addToCart = (item) => {
     if (item.hasVariants && item.variants && item.variants.length > 0) {
-      // 有變體 → 開啟選擇視窗
       setSelectedItemForVariant(item);
       setIsVariantModalOpen(true);
     } else {
-      // 沒有變體 → 直接加入
       if (item.type === 'product' && item.stock !== null) {
         const inCart = cart.find(c => c.id === item.id);
         if ((inCart ? inCart.qty : 0) + 1 > item.stock) {
@@ -395,7 +400,6 @@ function App() {
     }
   };
 
-  // 確認選擇變體後加入購物車
   const confirmVariantAndAddToCart = (variant) => {
     const item = selectedItemForVariant;
     if (!item) return;
@@ -441,6 +445,8 @@ function App() {
     setCart([]); 
     setDiscountPercent(0); 
     setPickupDate(''); 
+    setDiscountAmount(0);
+    setAdjustment(0);
   };
 
   const showToast = (message, type = 'success') => {
@@ -464,23 +470,25 @@ function App() {
   const openCheckout = () => {
     if (cart.length === 0) return;
     setSelectedPayment('cash');
-    setPaidAmount(total.toString());
+    setPaidAmount(finalTotal.toString());
     setCheckoutError('');
     setCustomerSearchTerm('');
     setSelectedCustomerForCheckout(null);
     setShowCustomerSuggestions(false);
     setPickupDate('');
+    setDiscountAmount(0);
+    setAdjustment(0);
     setIsPaymentModalOpen(true);
   };
 
   const processCheckout = () => {
     let change = 0;
     const paid = parseFloat(paidAmount) || 0;
-    if (selectedPayment === 'cash' && paid < total) {
+    if (selectedPayment === 'cash' && paid < finalTotal) {
       setCheckoutError('支付金額不足');
       return;
     }
-    if (selectedPayment === 'cash') change = paid - total;
+    if (selectedPayment === 'cash') change = paid - finalTotal;
 
     const invoiceNumber = generateInvoiceNumber();
 
@@ -491,8 +499,9 @@ function App() {
       date: new Date().toISOString().split('T')[0],
       items: [...cart],
       subtotal, 
-      discount: discountAmount, 
-      total,
+      discount: discountAmount,
+      adjustment: adjustment,
+      total: finalTotal,
       paymentMethod: paymentMethods.find(m => m.id === selectedPayment)?.label,
       change,
       customerName: selectedCustomerForCheckout?.name || customerSearchTerm || null,
@@ -501,7 +510,6 @@ function App() {
       company: companyInfo
     };
 
-    // 更新庫存
     const updatedItems = items.map(item => {
       const cartItems = cart.filter(c => c.id === item.id);
       if (cartItems.length > 0 && item.type === 'product' && item.stock !== null) {
@@ -933,7 +941,8 @@ function App() {
         '客戶電話': tx.customerPhone || '-',
         '商品明細': itemsText,
         '小計': tx.subtotal,
-        '折扣': tx.discount,
+        '折扣': tx.discount || 0,
+        '調整金額': tx.adjustment || 0,
         '總金額': tx.total,
         '支付方式': tx.paymentMethod,
         '預計取貨日期': tx.pickupDate || '-'
@@ -980,357 +989,463 @@ function App() {
       </header>
 
       <div className="max-w-[1600px] mx-auto px-6 py-6">
-                {/* ==================== 銷售頁面 ==================== */}
-        {activeTab === 'sales' && (
-          <div className="flex gap-6">
-            <div className="flex-1">
-              <h2 className="text-2xl font-semibold mb-4">商品與服務</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                {filteredItems.map(item => (
-                  <div key={item.id} onClick={() => addToCart(item)} className="bg-white border rounded-2xl p-4 cursor-pointer hover:border-rose-300 transition-all hover:shadow-sm relative">
-                    {item.isPopular && (
-                      <div className="absolute top-2 right-2 bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full font-medium">
-                        常用
-                      </div>
-                    )}
-                    <div className="font-semibold mb-1 pr-12">{item.name}</div>
-                    <div className="text-sm text-slate-500 mb-2">{item.category}</div>
-                    <div className="text-2xl font-bold">HK${item.price}</div>
-                    {item.hasVariants && item.variants.length > 0 && (
-                      <div className="text-xs text-emerald-600 mt-1">有 {item.variants.length} 個變體</div>
-                    )}
-                  </div>
-                ))}
-              </div>
+          const printReceipt = (transaction) => {
+    if (!transaction) return;
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return alert('請允許彈出視窗使用列印功能');
 
-              {/* 今日預約摘要 */}
-              <div className="mt-8">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-xl font-semibold">今日預約</h3>
-                  <button onClick={() => setActiveTab('appointments')} className="text-sm text-rose-600 hover:underline">查看全部 →</button>
-                </div>
-                <div className="bg-white border rounded-2xl p-4">
-                  {getTodayAppointments().length > 0 ? (
-                    getTodayAppointments().map((apt, index) => (
-                      <div key={index} className="flex justify-between items-center p-2 bg-slate-50 rounded-xl mb-2 last:mb-0">
-                        <div>
-                          <span className="font-medium">{apt.customerName}</span>
-                          <span className="text-slate-500 ml-2">({apt.time})</span>
-                        </div>
-                        <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full">{apt.status}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-center text-slate-400 py-4">今日暫無預約</p>
-                  )}
-                </div>
-              </div>
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Receipt - ${transaction.invoiceNumber}</title>
+          <style>
+            @media print { @page { size: A5 portrait; margin: 8mm; } }
+            body { font-family: "Noto Sans TC", "PingFang TC", system-ui, sans-serif; padding: 10mm; line-height: 1.55; font-size: 11px; color: #374151; }
+            .header { text-align: center; margin-bottom: 10px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 10.5px; }
+            th, td { padding: 7px 8px; border-bottom: 1px solid #f1f5f9; }
+            th { background: #f8fafc; font-weight: 600; }
+            .total { text-align: right; font-size: 12px; }
+            .thankyou { text-align: right; font-size: 12px; color: #6b7280; margin-top: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <img src="/logo.png" style="height:120px; margin-bottom:8px;" />
+            <div style="font-size:20px; font-weight:700;">RECEIPT</div>
+            <div style="font-size:13px; color:#6b7280;">麗明珠真髮中心</div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:10.5px;">
+            <div>
+              <strong style="font-size:9.5px; color:#6b7280;">BILLED TO</strong><br>
+              ${transaction.customerName || '客戶'}<br>
+              ${transaction.customerPhone || ''}
             </div>
-
-            {/* 購物車 */}
-            <div className="w-96 bg-white rounded-3xl border p-4 sticky top-20 h-fit shadow-sm">
-              <div className="font-semibold mb-3 flex items-center gap-2">
-                <ShoppingCart className="text-rose-600" /> 購物車
-              </div>
-
-              {cart.length > 0 ? (
-                cart.map((item, index) => {
-                  const displayName = item.selectedVariant 
-                    ? `${item.name} - ${item.selectedVariant.name}` 
-                    : item.name;
-                  const itemPrice = item.selectedVariant ? item.selectedVariant.price : item.price;
-
-                  return (
-                    <div key={index} className="border rounded-xl p-3 mb-2">
-                      <div className="flex justify-between text-sm">
-                        <div>{displayName} × {item.qty}</div>
-                        <div>HK$${(itemPrice * item.qty).toFixed(0)}</div>
-                      </div>
-                      <div className="flex gap-2 mt-2">
-                        <button onClick={() => updateCartQty(index, item.qty - 1)} className="px-2 border rounded text-sm">-</button>
-                        <button onClick={() => updateCartQty(index, item.qty + 1)} className="px-2 border rounded text-sm">+</button>
-                        <button onClick={() => removeFromCart(index)} className="ml-auto text-red-500 text-xs">移除</button>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="text-center text-slate-400 py-4">購物車是空的</p>
-              )}
-
-              {cart.length > 0 && (
-                <button onClick={openCheckout} className="mt-4 w-full bg-rose-600 text-white py-3 rounded-xl font-semibold hover:bg-rose-700 transition-colors">
-                  結帳付款
-                </button>
-              )}
+            <div style="text-align:right;">
+              <strong style="font-size:9.5px; color:#6b7280;">RECEIPT NO</strong><br>
+              ${transaction.invoiceNumber}<br>
+              <strong style="font-size:9.5px; color:#6b7280;">DATE</strong><br>
+              ${transaction.date} ${transaction.time}
             </div>
           </div>
-        )}
 
-        {/* ==================== 庫存頁面 ==================== */}
-        {activeTab === 'inventory' && (
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-semibold tracking-tight">庫存管理</h2>
-              <button onClick={openAddItemModal} className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 text-white rounded-xl hover:bg-rose-700 font-medium">
-                <Plus className="w-4 h-4" /> 添加商品 / 服務
-              </button>
-            </div>
-            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-              <table className="pos-table w-full">
-                <thead>
+          <table>
+            <thead>
+              <tr>
+                <th style="text-align:left;">項目</th>
+                <th style="text-align:center;">數量</th>
+                <th style="text-align:right;">單價</th>
+                <th style="text-align:right;">小計</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${transaction.items.map(item => {
+                const displayName = item.selectedVariant 
+                  ? `${item.name} - ${item.selectedVariant.name}` 
+                  : item.name;
+                const itemPrice = item.selectedVariant ? item.selectedVariant.price : item.price;
+                return `
                   <tr>
-                    <th>名稱</th>
-                    <th>類型</th>
-                    <th>類別</th>
-                    <th className="text-right">單價</th>
-                    <th className="text-right w-40">庫存 / 時長</th>
-                    <th className="text-center w-32">操作</th>
+                    <td>${displayName}</td>
+                    <td style="text-align:center;">${item.qty}</td>
+                    <td style="text-align:right;">HK$${itemPrice}</td>
+                    <td style="text-align:right;">HK$${(itemPrice * item.qty).toFixed(0)}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {items.map(item => (
-                    <tr key={item.id}>
-                      <td className="font-medium">{item.name}</td>
-                      <td>
-                        <span className={`inline-block px-3 py-0.5 text-xs rounded-full ${item.type === 'product' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                          {item.type === 'product' ? '商品' : '服務'}
-                        </span>
-                      </td>
-                      <td className="text-slate-500">{item.category}</td>
-                      <td className="text-right font-mono">HK${item.price}</td>
-                      <td className="text-right">
-                        {item.type === 'product' ? <span className="font-mono">{item.stock}</span> : <span className="text-emerald-600 font-medium">{item.duration}</span>}
-                      </td>
-                      <td className="text-center">
-                        <div className="flex justify-center gap-2">
-                          <button onClick={() => openEditItemModal(item)} className="text-xs px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200">編輯</button>
-                          <button onClick={() => deleteItem(item.id)} className="text-xs px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200">刪除</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+
+          <div class="total">
+            小計：HK$${transaction.subtotal}<br>
+            ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
+            <strong style="font-size:14px;">總金額：HK$${transaction.total}</strong><br>
+            支付方式：${transaction.paymentMethod}
+            ${transaction.pickupDate ? `<br>→ 預計取貨日期：${transaction.pickupDate}` : ''}
+          </div>
+
+          <div class="thankyou">Thank you for your business!</div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 300);
+  };
+
+  const printInvoice = (transaction) => {
+    if (!transaction) return;
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return alert('請允許彈出視窗使用列印功能');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Invoice - ${transaction.invoiceNumber}</title>
+          <style>
+            @media print { @page { size: A5 portrait; margin: 6mm; } }
+            body { font-family: "Noto Sans TC", "PingFang TC", system-ui, sans-serif; padding: 8mm; line-height: 1.55; font-size: 11px; color: #374151; }
+            .header { text-align: center; margin-bottom: 8px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 10.5px; }
+            th, td { padding: 7px 8px; border-bottom: 1px solid #f1f5f9; }
+            th { background: #f8fafc; font-weight: 600; }
+            .total { text-align: right; font-size: 11px; }
+            .thankyou { text-align: right; font-size: 12px; color: #6b7280; margin-top: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <img src="/logo.png" style="height:145px; margin-bottom:8px;" />
+            <div style="font-size:22px; font-weight:700;">INVOICE</div>
+            <div style="font-size:13px; color:#6b7280;">麗明珠真髮中心</div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:10.5px;">
+            <div>
+              <strong style="font-size:9.5px; color:#6b7280;">BILLED TO</strong><br>
+              ${transaction.customerName || '客戶'}<br>
+              ${transaction.customerPhone || ''}
+            </div>
+            <div style="text-align:right;">
+              <strong style="font-size:9.5px; color:#6b7280;">INVOICE NO</strong><br>
+              ${transaction.invoiceNumber}<br>
+              <strong style="font-size:9.5px; color:#6b7280;">DATE</strong><br>
+              ${transaction.date}
             </div>
           </div>
-        )}
 
-        {/* ==================== 訂單記錄頁面 ==================== */}
-        {activeTab === 'reports' && (
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-semibold tracking-tight">訂單記錄</h2>
-              <button onClick={exportToExcel} className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-medium">
-                <FileDown className="w-4 h-4" /> 匯出 Excel
-              </button>
-            </div>
+          <table>
+            <thead>
+              <tr>
+                <th style="text-align:left;">項目</th>
+                <th style="text-align:center;">數量</th>
+                <th style="text-align:right;">單價</th>
+                <th style="text-align:right;">小計</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${transaction.items.map(item => {
+                const displayName = item.selectedVariant 
+                  ? `${item.name} - ${item.selectedVariant.name}` 
+                  : item.name;
+                const itemPrice = item.selectedVariant ? item.selectedVariant.price : item.price;
+                return `
+                  <tr>
+                    <td>${displayName}</td>
+                    <td style="text-align:center;">${item.qty}</td>
+                    <td style="text-align:right;">HK$${itemPrice}</td>
+                    <td style="text-align:right;">HK$${(itemPrice * item.qty).toFixed(0)}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
 
-            <div className="bg-white rounded-2xl border p-4 mb-6 flex flex-wrap gap-4 items-end">
-              <div>
-                <label className="text-sm font-medium text-slate-600 block mb-1">開始日期</label>
-                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="border rounded-xl px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-600 block mb-1">結束日期</label>
-                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="border rounded-xl px-3 py-2 text-sm" />
-              </div>
-              <button onClick={() => { setStartDate(''); setEndDate(''); }} className="px-4 py-2 text-sm border rounded-xl hover:bg-slate-50">清除篩選</button>
-            </div>
-
-            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-              {transactions.length > 0 ? (
-                <table className="pos-table w-full">
-                  <thead>
-                    <tr>
-                      <th>發票編號</th>
-                      <th>日期 / 時間</th>
-                      <th>顧客</th>
-                      <th className="text-right">金額</th>
-                      <th>支付方式</th>
-                      <th className="text-center w-40">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {transactions
-                      .filter(tx => {
-                        if (startDate && tx.date < startDate) return false;
-                        if (endDate && tx.date > endDate) return false;
-                        return true;
-                      })
-                      .sort((a, b) => b.id - a.id)
-                      .map(tx => (
-                        <tr key={tx.id}>
-                          <td className="font-mono text-sm font-semibold">{tx.invoiceNumber}</td>
-                          <td className="text-sm text-slate-500">{tx.date} {tx.time}</td>
-                          <td>{tx.customerName || '-'}</td>
-                          <td className="text-right font-semibold">HK${tx.total}</td>
-                          <td><span className="text-xs px-3 py-1 bg-slate-100 rounded-full">{tx.paymentMethod}</span></td>
-                          <td className="text-center">
-                            <div className="flex justify-center gap-2">
-                              <button onClick={() => generateReceiptPDF(tx)} className="text-xs px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg">Receipt</button>
-                              <button onClick={() => generateInvoicePDF(tx)} className="text-xs px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg">Invoice</button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              ) : (
-                <div className="py-16 text-center text-slate-400">尚無訂單記錄</div>
-              )}
-            </div>
+          <div class="total">
+            小計：HK$${transaction.subtotal}<br>
+            ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
+            <strong style="font-size:14px;">總金額：HK$${transaction.total}</strong><br>
+            支付方式：${transaction.paymentMethod}
+            ${transaction.pickupDate ? `<br>→ 預計取貨日期：${transaction.pickupDate}` : ''}
           </div>
-        )}
 
-        {/* ==================== 客戶列表頁面 ==================== */}
-        {activeTab === 'customers' && (
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-semibold tracking-tight">客戶列表</h2>
-              <button onClick={openAddCustomerModal} className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 text-white rounded-xl hover:bg-rose-700 font-medium">
-                <Plus className="w-4 h-4" /> 新增客戶
-              </button>
-            </div>
+          <div class="thankyou">Thank you for your business!</div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 300);
+  };
 
-            <div className="mb-4">
-              <div className="relative">
-                <Search className="absolute left-4 top-3.5 w-4 h-4 text-slate-400" />
-                <input type="text" placeholder="搜尋客戶姓名或電話..." value={customerSearchTerm} onChange={(e) => setCustomerSearchTerm(e.target.value)} className="w-full pl-11 py-3 border border-slate-200 rounded-2xl focus:border-rose-400" />
-              </div>
-            </div>
+  const sendToWhatsApp = (transaction) => {
+    if (!transaction) return;
+    const phone = transaction.customerPhone ? transaction.customerPhone.replace(/\s/g, '') : '';
+    const hasPickup = transaction.pickupDate;
 
-            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-              {allCustomers.length > 0 ? (
-                <table className="pos-table w-full">
-                  <thead>
-                    <tr>
-                      <th>姓名</th>
-                      <th>電話</th>
-                      <th className="text-right">累計消費</th>
-                      <th className="text-center">消費次數</th>
-                      <th>最後消費</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {allCustomers
-                      .filter(c => c.name.toLowerCase().includes(customerSearchTerm.toLowerCase()) || c.phone.includes(customerSearchTerm))
-                      .map((customer, index) => {
-                        const customerTx = transactions.filter(tx => 
-                          (tx.customerName && tx.customerName === customer.name) || 
-                          (tx.customerPhone && tx.customerPhone === customer.phone)
-                        );
-                        const totalSpent = customerTx.reduce((sum, tx) => sum + tx.total, 0);
-                        return (
-                          <tr key={index} onClick={() => setSelectedCustomerForHistory(customer)} className="cursor-pointer hover:bg-slate-50">
-                            <td className="font-medium">{customer.name}</td>
-                            <td className="text-slate-500">{customer.phone || '-'}</td>
-                            <td className="text-right font-semibold text-emerald-600">HK${totalSpent}</td>
-                            <td className="text-center">{customerTx.length}</td>
-                            <td className="text-sm text-slate-500">{customerTx.length > 0 ? customerTx.sort((a,b) => b.date.localeCompare(a.date))[0].date : '-'}</td>
-                          </tr>
-                        );
-                      })}
-                  </tbody>
-                </table>
-              ) : (
-                <div className="py-16 text-center text-slate-400">尚無客戶資料</div>
-              )}
-            </div>
-          </div>
-        )}
+    const message = `麗明珠真髮中心 訂單確認\n\n訂單編號：${transaction.invoiceNumber}\n客戶：${transaction.customerName || '尊貴客戶'}\n總金額：HK$${transaction.total}\n支付方式：${transaction.paymentMethod}\n${hasPickup ? `預計取貨日期：${transaction.pickupDate}\n` : ''}請查看附件發票。\n\n${companyInfo.name}\nTel: ${companyInfo.phone} ｜ WhatsApp: ${companyInfo.whatsapp}`;
 
-        {/* ==================== 預約頁面 ==================== */}
-        {activeTab === 'appointments' && (
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-semibold tracking-tight">預約管理</h2>
-              <button onClick={openAddAppointment} className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 text-white rounded-xl hover:bg-rose-700 font-medium">
-                <Plus className="w-4 h-4" /> 新增預約
-              </button>
-            </div>
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = phone ? `https://wa.me/${phone}?text=${encodedMessage}` : `https://wa.me/?text=${encodedMessage}`;
+    window.open(whatsappUrl, '_blank');
+  };
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* 月曆 */}
-              <div className="lg:col-span-2 bg-white rounded-3xl border p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <button onClick={() => changeMonth(-1)} className="px-4 py-2 border rounded-xl hover:bg-slate-50">◀ 上個月</button>
-                  <div className="font-semibold text-lg">
-                    {currentMonth.getFullYear()} 年 {currentMonth.getMonth() + 1} 月
-                  </div>
-                  <button onClick={() => changeMonth(1)} className="px-4 py-2 border rounded-xl hover:bg-slate-50">下個月 ▶</button>
-                </div>
+  const generateReceiptPDF = async (transaction) => {
+    const margin = 6;
+    const pageWidth = 148;
+    const contentWidth = pageWidth - (margin * 2);
 
-                <div className="grid grid-cols-7 gap-1 text-center text-sm mb-2">
-                  {['日', '一', '二', '三', '四', '五', '六'].map(d => <div key={d} className="font-medium text-slate-500 py-2">{d}</div>)}
-                </div>
+    const tempDiv = document.createElement('div');
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.left = '-9999px';
+    tempDiv.style.width = `${contentWidth}mm`;
+    tempDiv.style.padding = '6mm';
+    tempDiv.style.background = '#ffffff';
+    tempDiv.style.border = '1px solid #d1d5db';
+    tempDiv.style.borderRadius = '3px';
+    tempDiv.style.fontFamily = '"Noto Sans TC", "PingFang TC", system-ui, sans-serif';
+    tempDiv.style.fontSize = '11px';
+    tempDiv.style.lineHeight = '1.5';
+    tempDiv.style.color = '#374151';
 
-                <div className="grid grid-cols-7 gap-1">
-                  {generateCalendarDays().map((day, index) => (
-                    <div key={index} onClick={() => day.dateStr && selectCalendarDate(day.dateStr)}
-                      className={`min-h-[60px] p-2 border rounded-xl text-sm cursor-pointer transition-all
-                        ${day.isCurrentMonth ? 'bg-white hover:bg-rose-50' : 'bg-slate-100 text-slate-400'}
-                        ${selectedDate === day.dateStr ? 'ring-2 ring-rose-500' : ''}
-                      `}>
-                      {day.day && (
-                        <div>
-                          <div className="font-medium">{day.day}</div>
-                          {day.hasAppointment && <div className="w-2 h-2 bg-rose-500 rounded-full mx-auto mt-1"></div>}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
+    let itemsHTML = '';
+    transaction.items.forEach(item => {
+      const displayName = item.selectedVariant 
+        ? `${item.name} - ${item.selectedVariant.name}` 
+        : item.name;
+      const itemPrice = item.selectedVariant ? item.selectedVariant.price : item.price;
+      itemsHTML += `
+        <tr style="border-bottom:1px solid #f1f5f9;">
+          <td style="padding:7px 8px;">${displayName}</td>
+          <td style="padding:7px 8px; text-align:center;">${item.qty}</td>
+          <td style="padding:7px 8px; text-align:right;">HK$${itemPrice}</td>
+          <td style="padding:7px 8px; text-align:right;">HK$${(itemPrice * item.qty).toFixed(0)}</td>
+        </tr>
+      `;
+    });
 
-              {/* 選定日期預約列表 */}
-              <div className="bg-white rounded-3xl border p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold">{selectedDate} 預約</h3>
-                  <button onClick={openAddAppointment} className="text-sm text-rose-600">+ 新增</button>
-                </div>
-
-                {getAppointmentsForDate(selectedDate).length > 0 ? (
-                  <div className="space-y-3">
-                    {getAppointmentsForDate(selectedDate).map(apt => (
-                      <div key={apt.id} className="border rounded-2xl p-4">
-                        <div className="flex justify-between">
-                          <div>
-                            <div className="font-medium">{apt.customerName}</div>
-                            <div className="text-sm text-slate-500">{apt.time} ｜ {apt.phone}</div>
-                          </div>
-                          <select value={apt.status} onChange={(e) => updateAppointmentStatus(apt.id, e.target.value)} className="text-xs border rounded px-2">
-                            <option value="pending">待確認</option>
-                            <option value="confirmed">已確認</option>
-                            <option value="completed">已完成</option>
-                            <option value="cancelled">已取消</option>
-                          </select>
-                        </div>
-                        {apt.notes && <div className="text-xs text-slate-500 mt-1">{apt.notes}</div>}
-                        <div className="flex gap-2 mt-3">
-                          <button onClick={() => deleteAppointment(apt.id)} className="text-xs text-red-500">刪除</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-center text-slate-400 py-8">此日期尚無預約</p>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+    tempDiv.innerHTML = `
+      <div style="text-align:center; margin-bottom:8px">
+        <img src="/logo.png" style="height:120px; margin-bottom:8px; display:block; margin-left:auto; margin-right:auto;" />
+        <div style="font-size:20px; font-weight:700;">RECEIPT</div>
+        <div style="font-size:13px; color:#6b7280;">麗明珠真髮中心</div>
       </div>
-            {/* ==================== 所有 Modal ==================== */}
+
+      <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:10.5px;">
+        <div>
+          <strong style="font-size:9.5px; color:#6b7280;">BILLED TO</strong><br>
+          ${transaction.customerName || '客戶'}<br>
+          ${transaction.customerPhone || ''}
+        </div>
+        <div style="text-align:right;">
+          <strong style="font-size:9.5px; color:#6b7280;">RECEIPT NO</strong><br>
+          ${transaction.invoiceNumber}<br>
+          <strong style="font-size:9.5px; color:#6b7280;">DATE</strong><br>
+          ${transaction.date} ${transaction.time}
+        </div>
+      </div>
+
+      <table style="width:100%; border-collapse:collapse; margin-bottom:12px; font-size:10.5px;">
+        <thead>
+          <tr style="background:#f8fafc; border-bottom:1px solid #e5e7eb;">
+            <th style="padding:7px 8px; text-align:left; font-weight:600;">項目</th>
+            <th style="padding:7px 8px; text-align:center; width:9%;">數量</th>
+            <th style="padding:7px 8px; text-align:right; width:14%;">單價</th>
+            <th style="padding:7px 8px; text-align:right; width:14%;">小計</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsHTML}
+        </tbody>
+      </table>
+
+      <div style="text-align:right; font-size:11px; margin-bottom:12px;">
+        小計：HK$${transaction.subtotal}<br>
+        ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
+        <strong style="font-size:14px;">總金額：HK$${transaction.total}</strong><br>
+        支付方式：${transaction.paymentMethod}
+        ${transaction.pickupDate ? `<br>→ 預計取貨日期：${transaction.pickupDate}` : ''}
+      </div>
+
+      <div style="text-align:right; font-size:12px; color:#6b7280; margin-top:10px;">
+        Thank you for your business!
+      </div>
+    `;
+
+    document.body.appendChild(tempDiv);
+
+    const canvas = await html2canvas(tempDiv, { scale: 3.5, backgroundColor: '#ffffff' });
+    const imgData = canvas.toDataURL('image/png');
+
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [148, 210] });
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    pdf.addImage(imgData, 'PNG', margin, margin, pdfWidth - (margin * 2), pdfHeight);
+    pdf.save(`Receipt_${transaction.invoiceNumber}_A5.pdf`);
+
+    document.body.removeChild(tempDiv);
+  };
+
+  const generateInvoicePDF = async (transaction) => {
+    const margin = 5;
+    const pageWidth = 148;
+    const contentWidth = pageWidth - (margin * 2);
+
+    const tempDiv = document.createElement('div');
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.left = '-9999px';
+    tempDiv.style.width = `${contentWidth}mm`;
+    tempDiv.style.padding = '6mm';
+    tempDiv.style.background = '#ffffff';
+    tempDiv.style.border = '1px solid #d1d5db';
+    tempDiv.style.borderRadius = '3px';
+    tempDiv.style.fontFamily = '"Noto Sans TC", "PingFang TC", system-ui, sans-serif';
+    tempDiv.style.fontSize = '11px';
+    tempDiv.style.lineHeight = '1.5';
+    tempDiv.style.color = '#374151';
+
+    let itemsHTML = '';
+    transaction.items.forEach(item => {
+      const displayName = item.selectedVariant 
+        ? `${item.name} - ${item.selectedVariant.name}` 
+        : item.name;
+      const itemPrice = item.selectedVariant ? item.selectedVariant.price : item.price;
+      itemsHTML += `
+        <tr style="border-bottom:1px solid #f1f5f9;">
+          <td style="padding:7px 8px;">${displayName}</td>
+          <td style="padding:7px 8px; text-align:center;">${item.qty}</td>
+          <td style="padding:7px 8px; text-align:right;">HK$${itemPrice}</td>
+          <td style="padding:7px 8px; text-align:right;">HK$${(itemPrice * item.qty).toFixed(0)}</td>
+        </tr>
+      `;
+    });
+
+    tempDiv.innerHTML = `
+      <div style="text-align:center; margin-bottom:8px">
+        <img src="/logo.png" style="height:155px; margin-bottom:8px; display:block; margin-left:auto; margin-right:auto;" />
+        <div style="font-size:22px; font-weight:700;">INVOICE</div>
+        <div style="font-size:13px; color:#6b7280; margin-top:2px;">麗明珠真髮中心</div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:10.5px;">
+        <div>
+          <strong style="font-size:9.5px; color:#6b7280;">BILLED TO</strong><br>
+          ${transaction.customerName || '客戶'}<br>
+          ${transaction.customerPhone || ''}
+        </div>
+        <div style="text-align:right;">
+          <strong style="font-size:9.5px; color:#6b7280;">INVOICE NO</strong><br>
+          ${transaction.invoiceNumber}<br>
+          <strong style="font-size:9.5px; color:#6b7280;">DATE</strong><br>
+          ${transaction.date}
+        </div>
+      </div>
+
+      <table style="width:100%; border-collapse:collapse; margin-bottom:12px; font-size:10.5px;">
+        <thead>
+          <tr style="background:#f8fafc; border-bottom:1px solid #e5e7eb;">
+            <th style="padding:7px 8px; text-align:left; font-weight:600;">項目</th>
+            <th style="padding:7px 8px; text-align:center; width:9%;">數量</th>
+            <th style="padding:7px 8px; text-align:right; width:14%;">單價</th>
+            <th style="padding:7px 8px; text-align:right; width:14%;">小計</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsHTML}
+        </tbody>
+      </table>
+
+      <div style="text-align:right; font-size:11px; margin-bottom:12px;">
+        小計：HK$${transaction.subtotal}<br>
+        ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
+        <span style="font-size:14px; font-weight:700;">總金額：HK$${transaction.total}</span><br>
+        <span style="font-size:10px;">支付方式：${transaction.paymentMethod}</span>
+        ${transaction.pickupDate ? `<br>→ 預計取貨日期：${transaction.pickupDate}` : ''}
+      </div>
+
+      <div style="text-align:right; font-size:12px; color:#6b7280; margin-top:10px;">
+        Thank you for your business!
+      </div>
+    `;
+
+    document.body.appendChild(tempDiv);
+
+    const canvas = await html2canvas(tempDiv, { scale: 3.5, backgroundColor: '#ffffff' });
+    const imgData = canvas.toDataURL('image/png');
+
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [148, 210] });
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    pdf.addImage(imgData, 'PNG', margin, margin, pdfWidth - (margin * 2), pdfHeight);
+    pdf.save(`Invoice_${transaction.invoiceNumber}_A5.pdf`);
+
+    document.body.removeChild(tempDiv);
+  };
+
+  const exportToExcel = () => {
+    let filteredTransactions = [...transactions];
+    if (startDate) filteredTransactions = filteredTransactions.filter(tx => tx.date >= startDate);
+    if (endDate) filteredTransactions = filteredTransactions.filter(tx => tx.date <= endDate);
+
+    if (filteredTransactions.length === 0) {
+      showToast('沒有符合條件的訂單', 'error');
+      return;
+    }
+
+    const data = filteredTransactions.map(tx => {
+      const itemsText = tx.items.map(item => {
+        const displayName = item.selectedVariant 
+          ? `${item.name} - ${item.selectedVariant.name}` 
+          : item.name;
+        return `${displayName} x${item.qty}`;
+      }).join(', ');
+
+      return {
+        '日期': tx.date,
+        '發票編號': tx.invoiceNumber,
+        '客戶姓名': tx.customerName || '-',
+        '客戶電話': tx.customerPhone || '-',
+        '商品明細': itemsText,
+        '小計': tx.subtotal,
+        '折扣': tx.discount || 0,
+        '調整金額': tx.adjustment || 0,
+        '總金額': tx.total,
+        '支付方式': tx.paymentMethod,
+        '預計取貨日期': tx.pickupDate || '-'
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "發票總表");
+    const fileName = `發票總表_${startDate || '全部'}_至_${endDate || '全部'}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    showToast(`已成功匯出 ${filteredTransactions.length} 筆訂單`, 'success');
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <header className="bg-white border-b sticky top-0 z-40">
+        <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src="/logo.png" alt="Logo" className="h-9 w-auto" />
+            <div>
+              <div className="font-bold text-xl text-rose-700">{companyInfo.name}</div>
+              <div className="text-xs text-rose-600 -mt-1">{companyInfo.english}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-[1600px] mx-auto px-6 border-t">
+          <div className="flex gap-1">
+            {[
+              { key: 'sales', label: '銷售' },
+              { key: 'inventory', label: '庫存' },
+              { key: 'reports', label: '訂單記錄' },
+              { key: 'customers', label: '客戶列表' },
+              { key: 'appointments', label: '預約' },
+            ].map(tab => (
+              <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.key ? 'border-rose-600 text-rose-600' : 'border-transparent hover:text-slate-600'}`}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-[1600px] mx-auto px-6 py-6">
+              {/* ==================== 所有 Modal ==================== */}
 
       {/* Payment Modal */}
       {isPaymentModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={closePaymentModal}>
           <div className="bg-white rounded-3xl p-8 w-full max-w-md" onClick={e => e.stopPropagation()}>
             <h2 className="text-2xl font-bold mb-4">確認付款</h2>
-            <p className="text-4xl font-bold mb-6">HK${total}</p>
+            <p className="text-4xl font-bold mb-6">HK${finalTotal}</p>
 
-            <div className="mb-6">
+            <div className="mb-4">
               <label className="text-sm font-medium text-slate-600 block mb-2">所屬客戶（選填）</label>
               <div className="relative">
                 <input type="text" value={customerSearchTerm} onChange={(e) => { setCustomerSearchTerm(e.target.value); setSelectedCustomerForCheckout(null); setShowCustomerSuggestions(true); }} onFocus={() => setShowCustomerSuggestions(true)} placeholder="輸入客戶姓名或電話..." className="w-full border p-3 rounded-xl focus:border-rose-400" />
@@ -1348,14 +1463,33 @@ function App() {
               {selectedCustomerForCheckout && <div className="mt-2 text-sm text-emerald-600">已選擇：{selectedCustomerForCheckout.name}</div>}
             </div>
 
-            {/* 預計取貨日期（選填） */}
-            <div className="mb-6">
+            {/* 預計取貨日期 */}
+            <div className="mb-4">
               <label className="text-sm font-medium text-slate-600 block mb-2">預計取貨日期（選填）</label>
+              <input type="date" value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} className="w-full border p-3 rounded-xl" />
+            </div>
+
+            {/* 折扣金額 */}
+            <div className="mb-4">
+              <label className="text-sm font-medium text-slate-600 block mb-2">折扣金額（選填）</label>
               <input 
-                type="date" 
-                value={pickupDate} 
-                onChange={(e) => setPickupDate(e.target.value)} 
+                type="number" 
+                value={discountAmount} 
+                onChange={(e) => setDiscountAmount(parseInt(e.target.value) || 0)} 
                 className="w-full border p-3 rounded-xl" 
+                placeholder="0" 
+              />
+            </div>
+
+            {/* 調整金額（內部使用） */}
+            <div className="mb-4">
+              <label className="text-sm font-medium text-slate-600 block mb-2">調整金額（內部使用，不顯示給客戶）</label>
+              <input 
+                type="number" 
+                value={adjustment} 
+                onChange={(e) => setAdjustment(parseInt(e.target.value) || 0)} 
+                className="w-full border p-3 rounded-xl" 
+                placeholder="0" 
               />
             </div>
 
@@ -1415,7 +1549,7 @@ function App() {
           </div>
         </div>
       )}
-            {/* Add Item Modal */}
+              {/* Add Item Modal */}
       {isAddItemModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setIsAddItemModalOpen(false)}>
           <div className="bg-white rounded-3xl p-8 w-full max-w-md" onClick={e => e.stopPropagation()}>
@@ -1528,20 +1662,6 @@ function App() {
         </div>
       )}
 
-      {/* WhatsApp 確認 Modal */}
-      {isWhatsAppConfirmOpen && pendingAppointment && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-3xl p-8 w-full max-w-md">
-            <h3 className="text-xl font-bold mb-4">是否發送 WhatsApp 確認訊息？</h3>
-            <p className="text-slate-600 mb-6">預約已成功新增，是否立即發送確認訊息給客戶？</p>
-            <div className="flex gap-3">
-              <button onClick={skipWhatsApp} className="flex-1 py-3 border rounded-xl">不用發送</button>
-              <button onClick={() => sendWhatsAppConfirmation(pendingAppointment)} className="flex-1 py-3 bg-green-600 text-white rounded-xl">發送確認訊息</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Edit Item Modal */}
       {isEditItemModalOpen && editingItem && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setIsEditItemModalOpen(false)}>
@@ -1583,7 +1703,7 @@ function App() {
 
                 {editingItem.hasVariants && (
                   <div className="border rounded-xl p-3 space-y-3">
-                    {editingItem.variants && editingItem.variants.map((variant, index) => (
+                    {(editingItem.variants || []).map((variant, index) => (
                       <div key={index} className="flex gap-2">
                         <input 
                           type="text" 
@@ -1675,6 +1795,19 @@ function App() {
           </div>
         </div>
       )}
+              {/* WhatsApp 確認 Modal */}
+      {isWhatsAppConfirmOpen && pendingAppointment && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-3xl p-8 w-full max-w-md">
+            <h3 className="text-xl font-bold mb-4">是否發送 WhatsApp 確認訊息？</h3>
+            <p className="text-slate-600 mb-6">預約已成功新增，是否立即發送確認訊息給客戶？</p>
+            <div className="flex gap-3">
+              <button onClick={skipWhatsApp} className="flex-1 py-3 border rounded-xl">不用發送</button>
+              <button onClick={() => sendWhatsAppConfirmation(pendingAppointment)} className="flex-1 py-3 bg-green-600 text-white rounded-xl">發送確認訊息</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 客戶消費紀錄 Modal */}
       {selectedCustomerForHistory && (
@@ -1742,9 +1875,8 @@ function App() {
           </div>
         </div>
       )}
-            {toast && <div className="fixed bottom-6 right-6 bg-slate-900 text-white px-6 py-3 rounded-2xl">{toast.message}</div>}
+              {toast && <div className="fixed bottom-6 right-6 bg-slate-900 text-white px-6 py-3 rounded-2xl">{toast.message}</div>}
     </div>
   );
 }
-
 export default App;

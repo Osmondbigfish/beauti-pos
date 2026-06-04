@@ -80,8 +80,8 @@ function App() {
   const [newAppointment, setNewAppointment] = useState({
     customerName: '', phone: '', date: '', time: '', notes: ''
   });
-  const [{/* WhatsApp 確認 Modal */}, set{/* WhatsApp 確認 Modal */}] = useState(false);
-  const [pendingAppointment, setPendingAppointment] = useState(null);
+const [isWhatsAppConfirmOpen, setIsWhatsAppConfirmOpen] = useState(false);
+const [pendingAppointment, setPendingAppointment] = useState(null);
 
   // ==================== localStorage 同步 ====================
   useEffect(() => {

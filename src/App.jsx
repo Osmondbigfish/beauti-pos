@@ -827,7 +827,6 @@ function App() {
         <div>支付方式：             ${transaction.paymentMethod}</div>
         ${transaction.pickupDate ? `<div>→ 預計取貨日期：       ${transaction.pickupDate}</div>` : ''}
         ${transaction.discount > 0 ? `<div>折扣：                 -HK$${transaction.discount}</div>` : ''}
-        ${transaction.channel ? `<div>來源渠道：             ${transaction.channel}</div>` : ''}
       </div>
 
       <div style="margin-top:28px; padding-top:8px; border-top:1px solid #e5e7eb; font-size:8.5px; line-height:1.35; color:#4b5563;">
@@ -940,7 +939,6 @@ function App() {
         <div>支付方式：             ${transaction.paymentMethod}</div>
         ${transaction.pickupDate ? `<div>→ 預計取貨日期：       ${transaction.pickupDate}</div>` : ''}
         ${transaction.discount > 0 ? `<div>折扣：                 -HK$${transaction.discount}</div>` : ''}
-        ${transaction.channel ? `<div>來源渠道：             ${transaction.channel}</div>` : ''}
       </div>
 
       <div style="margin-top:28px; padding-top:8px; border-top:1px solid #e5e7eb; font-size:8.5px; line-height:1.35; color:#4b5563;">
@@ -1055,7 +1053,6 @@ function App() {
             <div>支付方式：             ${transaction.paymentMethod}</div>
             ${transaction.pickupDate ? `<div>→ 預計取貨日期：       ${transaction.pickupDate}</div>` : ''}
             ${transaction.discount > 0 ? `<div>折扣：                 -HK$${transaction.discount}</div>` : ''}
-            ${transaction.channel ? `<div>來源渠道：             ${transaction.channel}</div>` : ''}
           </div>
 
           <div class="terms">
@@ -1153,7 +1150,6 @@ function App() {
             <div>支付方式：             ${transaction.paymentMethod}</div>
             ${transaction.pickupDate ? `<div>→ 預計取貨日期：       ${transaction.pickupDate}</div>` : ''}
             ${transaction.discount > 0 ? `<div>折扣：                 -HK$${transaction.discount}</div>` : ''}
-            ${transaction.channel ? `<div>來源渠道：             ${transaction.channel}</div>` : ''}
           </div>
 
           <div class="terms">

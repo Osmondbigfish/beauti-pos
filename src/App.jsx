@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   ShoppingCart, Package, BarChart3, Search, Plus, Minus, X, 
-  CreditCard, Banknote, Smartphone, CheckCircle, AlertCircle, Download, Send, FileDown, Calendar 
+  CreditCard, Banknote, Smartphone, CheckCircle, AlertCircle, Download, Send, FileDown, Calendar, Upload 
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -507,6 +507,105 @@ function App() {
     showToast(`已成功匯出 ${transactions.length} 筆消費記錄`, 'success');
   };
 
+  // 新增：匯入客戶消費記錄 CSV（重複則取代 + 自動新增客戶）
+  const importCustomersTransactionsCSV = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv';
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const csvText = event.target.result;
+          const lines = csvText.trim().split('\n');
+          const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+
+          let importedCount = 0;
+          let updatedCount = 0;
+          let newCustomersCount = 0;
+
+          const newTransactions = [...transactions];
+          const newCustomersList = [...customers];
+
+          for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+            if (values.length < headers.length) continue;
+
+            const row = {};
+            headers.forEach((header, index) => {
+              row[header] = values[index] || '';
+            });
+
+            const invoiceNumber = row['發票編號'] || row['Invoice Number'] || '';
+            if (!invoiceNumber) continue;
+
+            // 處理客戶
+            let customerName = row['客戶姓名'] || row['Customer Name'] || '';
+            let customerPhone = row['電話'] || row['Phone'] || '';
+
+            let existingCustomer = newCustomersList.find(c => 
+              c.name === customerName && c.phone === customerPhone
+            );
+
+            if (!existingCustomer && customerName) {
+              const newCust = { 
+                id: Date.now() + i, 
+                name: customerName, 
+                phone: customerPhone 
+              };
+              newCustomersList.push(newCust);
+              existingCustomer = newCust;
+              newCustomersCount++;
+            }
+
+            // 建立 transaction 物件
+            const newTx = {
+              id: Date.now() + i,
+              invoiceNumber: invoiceNumber,
+              time: row['時間'] || new Date().toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit' }),
+              date: row['發票日期'] || row['Invoice Date'] || new Date().toISOString().split('T')[0],
+              items: [{ name: row['購買項目'] || 'Imported Item', qty: 1, price: parseFloat(row['總金額']) || 0, selectedVariant: null }],
+              subtotal: parseFloat(row['小計']) || parseFloat(row['總金額']) || 0,
+              discount: parseFloat(row['折扣']) || 0,
+              adjustment: parseFloat(row['調整金額']) || 0,
+              total: parseFloat(row['總金額']) || 0,
+              paymentMethod: row['支付方式'] || '現金',
+              change: 0,
+              customerName: customerName || null,
+              customerPhone: customerPhone || null,
+              pickupDate: row['預計取貨日期'] || null,
+              company: companyInfo
+            };
+
+            // 檢查是否已存在相同發票編號
+            const existingIndex = newTransactions.findIndex(tx => tx.invoiceNumber === invoiceNumber);
+            if (existingIndex !== -1) {
+              newTransactions[existingIndex] = newTx;
+              updatedCount++;
+            } else {
+              newTransactions.push(newTx);
+              importedCount++;
+            }
+          }
+
+          setTransactions(newTransactions);
+          setCustomers(newCustomersList);
+
+          showToast(`匯入完成：新增 ${importedCount} 筆，更新 ${updatedCount} 筆，新增客戶 ${newCustomersCount} 位`, 'success');
+
+        } catch (error) {
+          showToast('CSV 解析失敗，請確認檔案格式', 'error');
+          console.error(error);
+        }
+      };
+      reader.readAsText(file, 'UTF-8');
+    };
+    input.click();
+  };
+
   const openCheckout = () => {
     if (cart.length === 0) return;
     setSelectedPayment('cash');
@@ -670,6 +769,10 @@ function App() {
         We will handle wigs with care during cleaning. However, the company is not liable for damage or loss caused by natural disasters or other events beyond our control.<br>
         本公司在為客人清洗假髮時會小心處理；但若因天災或其他不可抗力之事由導致損壞或遺失，本公司概不負責。
       </div>
+
+      <div style="text-align:right; font-size:11px; color:#6b7280; margin-top:8px;">
+        Thank you for your business!
+      </div>
     `;
 
     document.body.appendChild(tempDiv);
@@ -779,6 +882,10 @@ function App() {
         <strong style="font-size:9px;">清洗處理及天災責任 / Cleaning and Force Majeure</strong><br>
         We will handle wigs with care during cleaning. However, the company is not liable for damage or loss caused by natural disasters or other events beyond our control.<br>
         本公司在為客人清洗假髮時會小心處理；但若因天災或其他不可抗力之事由導致損壞或遺失，本公司概不負責。
+      </div>
+
+      <div style="text-align:right; font-size:11px; color:#6b7280; margin-top:8px;">
+        Thank you for your business!
       </div>
     `;
 
@@ -892,6 +999,8 @@ function App() {
             We will handle wigs with care during cleaning. However, the company is not liable for damage or loss caused by natural disasters or other events beyond our control.<br>
             本公司在為客人清洗假髮時會小心處理；但若因天災或其他不可抗力之事由導致損壞或遺失，本公司概不負責。
           </div>
+
+          <div class="thankyou">Thank you for your business!</div>
         </body>
       </html>
     `);
@@ -989,6 +1098,8 @@ function App() {
             We will handle wigs with care during cleaning. However, the company is not liable for damage or loss caused by natural disasters or other events beyond our control.<br>
             本公司在為客人清洗假髮時會小心處理；但若因天災或其他不可抗力之事由導致損壞或遺失，本公司概不負責。
           </div>
+
+          <div class="thankyou">Thank you for your business!</div>
         </body>
       </html>
     `);
@@ -1288,6 +1399,12 @@ function App() {
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-semibold tracking-tight">客戶列表</h2>
               <div className="flex gap-3">
+                <button 
+                  onClick={importCustomersTransactionsCSV} 
+                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium"
+                >
+                  <Upload className="w-4 h-4" /> 匯入消費記錄 CSV
+                </button>
                 <button 
                   onClick={exportCustomersTransactionsCSV} 
                   className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-medium"

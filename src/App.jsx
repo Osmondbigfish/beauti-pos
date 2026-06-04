@@ -20,14 +20,14 @@ const companyInfo = {
 };
 
 const initialItems = [
-  { id: 1, name: "優質短直真髮假髮 (自然黑)", price: 1280, type: "product", stock: 8, category: "假髮", requiresProcessing: true, defaultProcessingDays: 4 },
-  { id: 2, name: "長捲真髮假髮 (棕色)", price: 1680, type: "product", stock: 5, category: "假髮", requiresProcessing: true, defaultProcessingDays: 5 },
-  { id: 3, name: "高級真髮假髮護理套裝", price: 380, type: "product", stock: 22, category: "假髮用品", requiresProcessing: false },
-  { id: 4, name: "假髮專用清潔噴霧 (250ml)", price: 128, type: "product", stock: 35, category: "假髮用品", requiresProcessing: false },
-  { id: 5, name: "真髮假髮洗護造型服務", price: 450, type: "service", stock: null, duration: "約3-5天加工", category: "洗護服務", requiresProcessing: true, defaultProcessingDays: 4 },
-  { id: 6, name: "假髮專業染色服務", price: 680, type: "service", stock: null, duration: "約5天加工", category: "洗護服務", requiresProcessing: true, defaultProcessingDays: 5 },
-  { id: 7, name: "假髮修剪調整服務", price: 280, type: "service", stock: null, duration: "即日可取", category: "洗護服務", requiresProcessing: false },
-  { id: 8, name: "真髮假髮深層護理套餐", price: 880, type: "service", stock: null, duration: "約4天加工", category: "洗護服務", requiresProcessing: true, defaultProcessingDays: 4 },
+  { id: 1, name: "優質短直真髮假髮 (自然黑)", price: 1280, type: "product", stock: 8, category: "假髮", requiresProcessing: true, defaultProcessingDays: 4, isPopular: true },
+  { id: 2, name: "長捲真髮假髮 (棕色)", price: 1680, type: "product", stock: 5, category: "假髮", requiresProcessing: true, defaultProcessingDays: 5, isPopular: false },
+  { id: 3, name: "高級真髮假髮護理套裝", price: 380, type: "product", stock: 22, category: "假髮用品", requiresProcessing: false, isPopular: true },
+  { id: 4, name: "假髮專用清潔噴霧 (250ml)", price: 128, type: "product", stock: 35, category: "假髮用品", requiresProcessing: false, isPopular: false },
+  { id: 5, name: "真髮假髮洗護造型服務", price: 450, type: "service", stock: null, duration: "約3-5天加工", category: "洗護服務", requiresProcessing: true, defaultProcessingDays: 4, isPopular: true },
+  { id: 6, name: "假髮專業染色服務", price: 680, type: "service", stock: null, duration: "約5天加工", category: "洗護服務", requiresProcessing: true, defaultProcessingDays: 5, isPopular: false },
+  { id: 7, name: "假髮修剪調整服務", price: 280, type: "service", stock: null, duration: "即日可取", category: "洗護服務", requiresProcessing: false, isPopular: true },
+  { id: 8, name: "真髮假髮深層護理套餐", price: 880, type: "service", stock: null, duration: "約4天加工", category: "洗護服務", requiresProcessing: true, defaultProcessingDays: 4, isPopular: false },
 ];
 
 const paymentMethods = [
@@ -64,12 +64,13 @@ function App() {
 
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
   const [newItem, setNewItem] = useState({
-    name: '', price: '', type: 'product', category: '', requiresProcessing: false, defaultProcessingDays: 4, stock: ''
+    name: '', price: '', type: 'product', category: '', requiresProcessing: false, defaultProcessingDays: 4, stock: '', isPopular: false
   });
 
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
+  // 預約功能
   const [appointments, setAppointments] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -79,9 +80,14 @@ function App() {
   });
   const [isWhatsAppConfirmOpen, setIsWhatsAppConfirmOpen] = useState(false);
   const [pendingAppointment, setPendingAppointment] = useState(null);
+
+  // 新增狀態
+  const [pickupDate, setPickupDate] = useState('');
   const [isEditItemModalOpen, setIsEditItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [selectedCustomerForHistory, setSelectedCustomerForHistory] = useState(null);
 
+  // localStorage
   useEffect(() => {
     const savedItems = localStorage.getItem('pos_items');
     if (savedItems) setItems(JSON.parse(savedItems));
@@ -105,11 +111,18 @@ function App() {
   const discountAmount = Math.round(subtotal * (discountPercent / 100));
   const total = Math.max(0, subtotal - discountAmount);
 
-  const filteredItems = items
-    .filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-                    (categoryFilter === '全部' || item.category === categoryFilter))
-    .sort((a, b) => a.type === b.type ? a.name.localeCompare(b.name, 'zh-HK') : (a.type === 'product' ? -1 : 1));
+  // 排序：常用項目排前面
+  const sortedItems = [...items].sort((a, b) => {
+    if (a.isPopular && !b.isPopular) return -1;
+    if (!a.isPopular && b.isPopular) return 1;
+    return 0;
+  });
 
+  const filteredItems = sortedItems
+    .filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+                    (categoryFilter === '全部' || item.category === categoryFilter));
+
+  // 預約相關函數
   const getAppointmentsForDate = (date) => {
     return appointments.filter(a => a.date === date).sort((a, b) => a.time.localeCompare(b.time));
   };
@@ -289,7 +302,8 @@ function App() {
       category: '',
       requiresProcessing: false,
       defaultProcessingDays: 4,
-      stock: ''
+      stock: '',
+      isPopular: false
     });
     setIsAddItemModalOpen(true);
   };
@@ -309,7 +323,8 @@ function App() {
       requiresProcessing: newItem.requiresProcessing,
       defaultProcessingDays: newItem.requiresProcessing ? parseInt(newItem.defaultProcessingDays) : null,
       stock: newItem.type === 'product' ? (parseInt(newItem.stock) || 0) : null,
-      duration: newItem.type === 'service' ? '約3-5天加工' : null
+      duration: newItem.type === 'service' ? '約3-5天加工' : null,
+      isPopular: newItem.isPopular
     };
 
     setItems(prev => [...prev, newProduct]);
@@ -359,13 +374,7 @@ function App() {
       if (existing) {
         return prev.map(c => c.id === item.id ? { ...c, qty: c.qty + 1 } : c);
       } else {
-        let newItem = { ...item, qty: 1 };
-        if (item.requiresProcessing) {
-          const d = new Date();
-          d.setDate(d.getDate() + (item.defaultProcessingDays || 4));
-          newItem.pickupDate = d.toISOString().split('T')[0];
-        }
-        return [...prev, newItem];
+        return [...prev, { ...item, qty: 1 }];
       }
     });
     showToast(`${item.name} 已加入購物車`, 'success');
@@ -381,12 +390,8 @@ function App() {
     setCart(prev => prev.map(item => item.id === id ? { ...item, qty: newQty } : item));
   };
 
-  const updatePickupDate = (id, newDate) => {
-    setCart(prev => prev.map(item => item.id === id ? { ...item, pickupDate: newDate } : item));
-  };
-
   const removeFromCart = (id) => setCart(prev => prev.filter(item => item.id !== id));
-  const clearCart = () => { setCart([]); setDiscountPercent(0); };
+  const clearCart = () => { setCart([]); setDiscountPercent(0); setPickupDate(''); };
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -414,6 +419,7 @@ function App() {
     setCustomerSearchTerm('');
     setSelectedCustomerForCheckout(null);
     setShowCustomerSuggestions(false);
+    setPickupDate('');
     setIsPaymentModalOpen(true);
   };
 
@@ -430,8 +436,7 @@ function App() {
 
     const txItems = cart.map(item => ({
       ...item,
-      requiresProcessing: item.requiresProcessing || false,
-      pickupDate: item.pickupDate || null
+      requiresProcessing: item.requiresProcessing || false
     }));
 
     const newTransaction = {
@@ -440,11 +445,14 @@ function App() {
       time: new Date().toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit' }),
       date: new Date().toISOString().split('T')[0],
       items: txItems,
-      subtotal, discount: discountAmount, total,
+      subtotal, 
+      discount: discountAmount, 
+      total,
       paymentMethod: paymentMethods.find(m => m.id === selectedPayment)?.label,
       change,
       customerName: selectedCustomerForCheckout?.name || customerSearchTerm || null,
       customerPhone: selectedCustomerForCheckout?.phone || null,
+      pickupDate: pickupDate || null,
       company: companyInfo
     };
 
@@ -479,8 +487,7 @@ function App() {
   };
 
   const closeSuccessModal = () => { setIsSuccessModalOpen(false); setLastTransaction(null); };
-
-  const printReceipt = (transaction) => {
+    const printReceipt = (transaction) => {
     if (!transaction) return;
     const printWindow = window.open('', '_blank');
     if (!printWindow) return alert('請允許彈出視窗使用列印功能');
@@ -538,7 +545,6 @@ function App() {
                   <td style="text-align:right;">HK$${item.price}</td>
                   <td style="text-align:right;">HK$${(item.price * item.qty).toFixed(0)}</td>
                 </tr>
-                ${item.pickupDate ? `<tr><td colspan="4" style="font-size:9.5px;">→ 取貨日期：${item.pickupDate}</td></tr>` : ''}
               `).join('')}
             </tbody>
           </table>
@@ -548,6 +554,7 @@ function App() {
             ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
             <strong style="font-size:14px;">總金額：HK$${transaction.total}</strong><br>
             支付方式：${transaction.paymentMethod}
+            ${transaction.pickupDate ? `<br>→ 預計取貨日期：${transaction.pickupDate}` : ''}
           </div>
 
           <div class="thankyou">Thank you for your business!</div>
@@ -616,7 +623,6 @@ function App() {
                   <td style="text-align:right;">HK$${item.price}</td>
                   <td style="text-align:right;">HK$${(item.price * item.qty).toFixed(0)}</td>
                 </tr>
-                ${item.pickupDate ? `<tr><td colspan="4" style="font-size:9.5px;">→ 取貨日期：${item.pickupDate}</td></tr>` : ''}
               `).join('')}
             </tbody>
           </table>
@@ -626,6 +632,7 @@ function App() {
             ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
             <strong style="font-size:14px;">總金額：HK$${transaction.total}</strong><br>
             支付方式：${transaction.paymentMethod}
+            ${transaction.pickupDate ? `<br>→ 預計取貨日期：${transaction.pickupDate}` : ''}
           </div>
 
           <div class="thankyou">Thank you for your business!</div>
@@ -639,9 +646,9 @@ function App() {
   const sendToWhatsApp = (transaction) => {
     if (!transaction) return;
     const phone = transaction.customerPhone ? transaction.customerPhone.replace(/\s/g, '') : '';
-    const hasPickup = transaction.items.some(i => i.pickupDate);
+    const hasPickup = transaction.pickupDate;
 
-    const message = `麗明珠真髮中心 訂單確認\n\n訂單編號：${transaction.invoiceNumber}\n客戶：${transaction.customerName || '尊貴客戶'}\n總金額：HK$${transaction.total}\n支付方式：${transaction.paymentMethod}\n${hasPickup ? `取貨日期：${transaction.items.find(i => i.pickupDate)?.pickupDate}\n` : ''}請查看附件發票。\n\n${companyInfo.name}\nTel: ${companyInfo.phone} ｜ WhatsApp: ${companyInfo.whatsapp}`;
+    const message = `麗明珠真髮中心 訂單確認\n\n訂單編號：${transaction.invoiceNumber}\n客戶：${transaction.customerName || '尊貴客戶'}\n總金額：HK$${transaction.total}\n支付方式：${transaction.paymentMethod}\n${hasPickup ? `預計取貨日期：${transaction.pickupDate}\n` : ''}請查看附件發票。\n\n${companyInfo.name}\nTel: ${companyInfo.phone} ｜ WhatsApp: ${companyInfo.whatsapp}`;
 
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = phone ? `https://wa.me/${phone}?text=${encodedMessage}` : `https://wa.me/?text=${encodedMessage}`;
@@ -704,7 +711,6 @@ function App() {
               <td style="padding:7px 8px; text-align:right;">HK$${item.price}</td>
               <td style="padding:7px 8px; text-align:right;">HK$${(item.price * item.qty).toFixed(0)}</td>
             </tr>
-            ${item.pickupDate ? `<tr><td colspan="4" style="padding:3px 8px; font-size:9.5px;">→ 取貨日期：${item.pickupDate}</td></tr>` : ''}
           `).join('')}
         </tbody>
       </table>
@@ -714,6 +720,7 @@ function App() {
         ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
         <strong style="font-size:14px;">總金額：HK$${transaction.total}</strong><br>
         支付方式：${transaction.paymentMethod}
+        ${transaction.pickupDate ? `<br>→ 預計取貨日期：${transaction.pickupDate}` : ''}
       </div>
 
       <div style="text-align:right; font-size:12px; color:#6b7280; margin-top:10px;">
@@ -792,7 +799,6 @@ function App() {
               <td style="padding:7px 8px; text-align:right;">HK$${item.price}</td>
               <td style="padding:7px 8px; text-align:right;">HK$${(item.price * item.qty).toFixed(0)}</td>
             </tr>
-            ${item.pickupDate ? `<tr><td colspan="4" style="padding:3px 8px; font-size:9.5px;">→ 取貨日期：${item.pickupDate}</td></tr>` : ''}
           `).join('')}
         </tbody>
       </table>
@@ -802,6 +808,7 @@ function App() {
         ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
         <span style="font-size:14px; font-weight:700;">總金額：HK$${transaction.total}</span><br>
         <span style="font-size:10px;">支付方式：${transaction.paymentMethod}</span>
+        ${transaction.pickupDate ? `<br>→ 預計取貨日期：${transaction.pickupDate}` : ''}
       </div>
 
       <div style="text-align:right; font-size:12px; color:#6b7280; margin-top:10px;">
@@ -845,7 +852,8 @@ function App() {
         '小計': tx.subtotal,
         '折扣': tx.discount,
         '總金額': tx.total,
-        '支付方式': tx.paymentMethod
+        '支付方式': tx.paymentMethod,
+        '預計取貨日期': tx.pickupDate || '-'
       };
     });
 
@@ -896,8 +904,13 @@ function App() {
               <h2 className="text-2xl font-semibold mb-4">商品與服務</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredItems.map(item => (
-                  <div key={item.id} onClick={() => addToCart(item)} className="bg-white border rounded-2xl p-4 cursor-pointer hover:border-rose-300 transition-all hover:shadow-sm">
-                    <div className="font-semibold mb-1">{item.name}</div>
+                  <div key={item.id} onClick={() => addToCart(item)} className="bg-white border rounded-2xl p-4 cursor-pointer hover:border-rose-300 transition-all hover:shadow-sm relative">
+                    {item.isPopular && (
+                      <div className="absolute top-2 right-2 bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full font-medium">
+                        常用
+                      </div>
+                    )}
+                    <div className="font-semibold mb-1 pr-12">{item.name}</div>
                     <div className="text-sm text-slate-500 mb-2">{item.category}</div>
                     <div className="text-2xl font-bold">HK${item.price}</div>
                   </div>
@@ -941,12 +954,6 @@ function App() {
                       <div>{item.name} × {item.qty}</div>
                       <div>HK$${(item.price * item.qty).toFixed(0)}</div>
                     </div>
-                    {item.pickupDate && (
-                      <div className="mt-2">
-                        <div className="text-xs text-amber-600 mb-1">預計取貨日期</div>
-                        <input type="date" value={item.pickupDate} onChange={e => updatePickupDate(item.id, e.target.value)} className="w-full text-xs border rounded px-2 py-1" />
-                      </div>
-                    )}
                     <div className="flex gap-2 mt-2">
                       <button onClick={() => updateCartQty(item.id, item.qty - 1)} className="px-2 border rounded text-sm">-</button>
                       <button onClick={() => updateCartQty(item.id, item.qty + 1)} className="px-2 border rounded text-sm">+</button>
@@ -1122,7 +1129,7 @@ function App() {
                         );
                         const totalSpent = customerTx.reduce((sum, tx) => sum + tx.total, 0);
                         return (
-                          <tr key={index}>
+                          <tr key={index} onClick={() => setSelectedCustomerForHistory(customer)} className="cursor-pointer hover:bg-slate-50">
                             <td className="font-medium">{customer.name}</td>
                             <td className="text-slate-500">{customer.phone || '-'}</td>
                             <td className="text-right font-semibold text-emerald-600">HK${totalSpent}</td>
@@ -1248,6 +1255,17 @@ function App() {
               {selectedCustomerForCheckout && <div className="mt-2 text-sm text-emerald-600">已選擇：{selectedCustomerForCheckout.name}</div>}
             </div>
 
+            {/* 預計取貨日期（選填） */}
+            <div className="mb-6">
+              <label className="text-sm font-medium text-slate-600 block mb-2">預計取貨日期（選填）</label>
+              <input 
+                type="date" 
+                value={pickupDate} 
+                onChange={(e) => setPickupDate(e.target.value)} 
+                className="w-full border p-3 rounded-xl" 
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-3 mb-6">
               {paymentMethods.map(m => (
                 <button key={m.id} onClick={() => setSelectedPayment(m.id)} className={`p-4 border rounded-2xl ${selectedPayment === m.id ? 'border-rose-600 bg-rose-50' : ''}`}>{m.label}</button>
@@ -1304,8 +1322,7 @@ function App() {
           </div>
         </div>
       )}
-
-      {/* Add Item Modal */}
+            {/* Add Item Modal */}
       {isAddItemModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setIsAddItemModalOpen(false)}>
           <div className="bg-white rounded-3xl p-8 w-full max-w-md" onClick={e => e.stopPropagation()}>
@@ -1338,6 +1355,10 @@ function App() {
                   <input type="number" value={newItem.stock} onChange={e => setNewItem({...newItem, stock: e.target.value})} className="w-full border p-3 rounded-xl mt-1" placeholder="10" />
                 </div>
               )}
+              <div className="flex items-center gap-3 pt-2">
+                <input type="checkbox" checked={newItem.isPopular} onChange={e => setNewItem({...newItem, isPopular: e.target.checked})} />
+                <span className="text-sm">設為常用項目</span>
+              </div>
               <div className="flex items-center gap-3 pt-2">
                 <input type="checkbox" checked={newItem.requiresProcessing} onChange={e => setNewItem({...newItem, requiresProcessing: e.target.checked})} />
                 <span className="text-sm">需要加工</span>
@@ -1405,6 +1426,10 @@ function App() {
                 </div>
               )}
               <div className="flex items-center gap-3 pt-2">
+                <input type="checkbox" checked={editingItem.isPopular} onChange={e => setEditingItem({...editingItem, isPopular: e.target.checked})} />
+                <span className="text-sm">設為常用項目</span>
+              </div>
+              <div className="flex items-center gap-3 pt-2">
                 <input type="checkbox" checked={editingItem.requiresProcessing} onChange={e => setEditingItem({...editingItem, requiresProcessing: e.target.checked})} />
                 <span className="text-sm">需要加工</span>
               </div>
@@ -1423,9 +1448,64 @@ function App() {
         </div>
       )}
 
-      {toast && <div className="fixed bottom-6 right-6 bg-slate-900 text-white px-6 py-3 rounded-2xl">{toast.message}</div>}
-    </div>
-  );
-}
+      {/* 客戶消費紀錄 Modal */}
+      {selectedCustomerForHistory && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setSelectedCustomerForHistory(null)}>
+          <div className="bg-white rounded-3xl w-full max-w-3xl p-8" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold">客戶消費紀錄</h2>
+              <button onClick={() => setSelectedCustomerForHistory(null)} className="text-xl">×</button>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-lg font-semibold">{selectedCustomerForHistory.name}</p>
+              <p className="text-slate-500">{selectedCustomerForHistory.phone || '無電話'}</p>
+            </div>
 
-export default App;
+            <div className="max-h-[400px] overflow-auto border rounded-2xl">
+              {transactions
+                .filter(tx => 
+                  (tx.customerName && tx.customerName === selectedCustomerForHistory.name) || 
+                  (tx.customerPhone && tx.customerPhone === selectedCustomerForHistory.phone)
+                )
+                .sort((a, b) => b.date.localeCompare(a.date))
+                .length > 0 ? (
+                <table className="pos-table w-full">
+                  <thead>
+                    <tr>
+                      <th>日期</th>
+                      <th>發票編號</th>
+                      <th>項目</th>
+                      <th className="text-right">金額</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transactions
+                      .filter(tx => 
+                        (tx.customerName && tx.customerName === selectedCustomerForHistory.name) || 
+                        (tx.customerPhone && tx.customerPhone === selectedCustomerForHistory.phone)
+                      )
+                      .sort((a, b) => b.date.localeCompare(a.date))
+                      .map(tx => (
+                        <tr key={tx.id}>
+                          <td>{tx.date}</td>
+                          <td className="font-mono text-sm">{tx.invoiceNumber}</td>
+                          <td className="text-sm">
+                            {tx.items.map(i => i.name).join(', ')}
+                          </td>
+                          <td className="text-right font-semibold">HK${tx.total}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="py-12 text-center text-slate-400">此客戶尚無消費紀錄</div>
+              )}
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button onClick={() => setSelectedCustomerForHistory(null)} className="px-6 py-2 border rounded-xl">關閉</button>
+            </div>
+          </div>
+        </div>
+      )}

@@ -1509,3 +1509,9 @@ function App() {
           </div>
         </div>
       )}
+      {toast && <div className="fixed bottom-6 right-6 bg-slate-900 text-white px-6 py-3 rounded-2xl">{toast.message}</div>}
+    </div>
+  );
+}
+
+export default App;

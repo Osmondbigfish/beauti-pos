@@ -819,7 +819,7 @@ function App() {
     document.body.removeChild(tempDiv);
   };
 
-  const generateInvoicePDF = async (transaction) => {
+    const generateInvoicePDF = async (transaction) => {
     const margin = 5;
     const pageWidth = 148;
     const contentWidth = pageWidth - (margin * 2);
@@ -855,9 +855,8 @@ function App() {
 
     tempDiv.innerHTML = `
       <div style="text-align:center; margin-bottom:8px">
-        <img src="/logo.png" style="height:155px; margin-bottom:8px; display:block; margin-left:auto; margin-right:auto;" />
+        <img src="/logo.png" style="height:155px; margin-bottom:6px; display:block; margin-left:auto; margin-right:auto;" />
         <div style="font-size:22px; font-weight:700;">INVOICE</div>
-        <div style="font-size:13px; color:#6b7280; margin-top:2px;">麗明珠真髮中心</div>
       </div>
 
       <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:10.5px;">
@@ -894,6 +893,21 @@ function App() {
         <span style="font-size:14px; font-weight:700;">總金額：HK$${transaction.total}</span><br>
         <span style="font-size:10px;">支付方式：${transaction.paymentMethod}</span>
         ${transaction.pickupDate ? `<br>→ 預計取貨日期：${transaction.pickupDate}` : ''}
+      </div>
+
+      <!-- 條款區域 -->
+      <div style="margin-top:12px; padding-top:8px; border-top:1px solid #e5e7eb; font-size:8.5px; line-height:1.4; color:#4b5563;">
+        <strong style="font-size:9px;">取貨期限 / Collection Period</strong><br>
+        Please collect your goods within three months from the order date. Uncollected items after this period will be void.<br>
+        請於本訂單日期起三個月內憑單取回假髮；逾期未取者，該物品視作作廢。<br><br>
+
+        <strong style="font-size:9px;">自然磨損及褪色 / Natural Wear and Tear</strong><br>
+        The company is not responsible for colour changes or other damage resulting from normal wear and tear or natural ageing of the hair.<br>
+        因日常使用或頭髮自然老化而引致的變色或損壞，本公司恕不負責。<br><br>
+
+        <strong style="font-size:9px;">清洗處理及天災責任 / Cleaning and Force Majeure</strong><br>
+        We will handle wigs with care during cleaning. However, the company is not liable for damage or loss caused by natural disasters or other events beyond our control.<br>
+        本公司在為客人清洗假髮時會小心處理；但若因天災或其他不可抗力之事由導致損壞或遺失，本公司概不負責。
       </div>
 
       <div style="text-align:right; font-size:12px; color:#6b7280; margin-top:10px;">

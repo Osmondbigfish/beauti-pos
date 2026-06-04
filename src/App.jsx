@@ -20,14 +20,18 @@ const companyInfo = {
 };
 
 const initialItems = [
-  { id: 1, name: "優質短直真髮假髮 (自然黑)", price: 1280, type: "product", stock: 8, category: "假髮", requiresProcessing: true, defaultProcessingDays: 4, isPopular: true },
-  { id: 2, name: "長捲真髮假髮 (棕色)", price: 1680, type: "product", stock: 5, category: "假髮", requiresProcessing: true, defaultProcessingDays: 5, isPopular: false },
-  { id: 3, name: "高級真髮假髮護理套裝", price: 380, type: "product", stock: 22, category: "假髮用品", requiresProcessing: false, isPopular: true },
-  { id: 4, name: "假髮專用清潔噴霧 (250ml)", price: 128, type: "product", stock: 35, category: "假髮用品", requiresProcessing: false, isPopular: false },
-  { id: 5, name: "真髮假髮洗護造型服務", price: 450, type: "service", stock: null, duration: "約3-5天加工", category: "洗護服務", requiresProcessing: true, defaultProcessingDays: 4, isPopular: true },
-  { id: 6, name: "假髮專業染色服務", price: 680, type: "service", stock: null, duration: "約5天加工", category: "洗護服務", requiresProcessing: true, defaultProcessingDays: 5, isPopular: false },
-  { id: 7, name: "假髮修剪調整服務", price: 280, type: "service", stock: null, duration: "即日可取", category: "洗護服務", requiresProcessing: false, isPopular: true },
-  { id: 8, name: "真髮假髮深層護理套餐", price: 880, type: "service", stock: null, duration: "約4天加工", category: "洗護服務", requiresProcessing: true, defaultProcessingDays: 4, isPopular: false },
+  { id: 1, name: "優質短直真髮假髮 (自然黑)", price: 1280, type: "product", stock: 8, category: "假髮", hasVariants: false, variants: [], isPopular: true },
+  { id: 2, name: "長捲真髮假髮 (棕色)", price: 1680, type: "product", stock: 5, category: "假髮", hasVariants: false, variants: [], isPopular: false },
+  { id: 3, name: "高級真髮假髮護理套裝", price: 380, type: "product", stock: 22, category: "假髮用品", hasVariants: false, variants: [], isPopular: true },
+  { id: 4, name: "假髮專用清潔噴霧 (250ml)", price: 128, type: "product", stock: 35, category: "假髮用品", hasVariants: false, variants: [], isPopular: false },
+  { id: 5, name: "真髮假髮洗護造型服務", price: 450, type: "service", stock: null, duration: "約3-5天加工", category: "洗護服務", hasVariants: false, variants: [], isPopular: true },
+  { id: 6, name: "假髮專業染色服務", price: 680, type: "service", stock: null, duration: "約5天加工", category: "洗護服務", hasVariants: true, variants: [
+    { id: 1, name: "紅色", price: 90 },
+    { id: 2, name: "黃色", price: 100 },
+    { id: 3, name: "黑色", price: 120 }
+  ], isPopular: false },
+  { id: 7, name: "假髮修剪調整服務", price: 280, type: "service", stock: null, duration: "即日可取", category: "洗護服務", hasVariants: false, variants: [], isPopular: true },
+  { id: 8, name: "真髮假髮深層護理套餐", price: 880, type: "service", stock: null, duration: "約4天加工", category: "洗護服務", hasVariants: false, variants: [], isPopular: false },
 ];
 
 const paymentMethods = [
@@ -64,7 +68,7 @@ function App() {
 
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
   const [newItem, setNewItem] = useState({
-    name: '', price: '', type: 'product', category: '', requiresProcessing: false, defaultProcessingDays: 4, stock: '', isPopular: false
+    name: '', price: '', type: 'product', category: '', hasVariants: false, variants: [], stock: '', isPopular: false
   });
 
   const [startDate, setStartDate] = useState('');
@@ -87,6 +91,10 @@ function App() {
   const [editingItem, setEditingItem] = useState(null);
   const [selectedCustomerForHistory, setSelectedCustomerForHistory] = useState(null);
 
+  // 變體選擇 Modal
+  const [isVariantModalOpen, setIsVariantModalOpen] = useState(false);
+  const [selectedItemForVariant, setSelectedItemForVariant] = useState(null);
+
   // localStorage
   useEffect(() => {
     const savedItems = localStorage.getItem('pos_items');
@@ -107,7 +115,7 @@ function App() {
   useEffect(() => { localStorage.setItem('pos_customers', JSON.stringify(customers)); }, [customers]);
   useEffect(() => { localStorage.setItem('pos_appointments', JSON.stringify(appointments)); }, [appointments]);
 
-  const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const subtotal = cart.reduce((sum, item) => sum + (item.selectedVariant ? item.selectedVariant.price : item.price) * item.qty, 0);
   const discountAmount = Math.round(subtotal * (discountPercent / 100));
   const total = Math.max(0, subtotal - discountAmount);
 
@@ -300,8 +308,8 @@ function App() {
       price: '',
       type: 'product',
       category: '',
-      requiresProcessing: false,
-      defaultProcessingDays: 4,
+      hasVariants: false,
+      variants: [],
       stock: '',
       isPopular: false
     });
@@ -320,8 +328,8 @@ function App() {
       price: parseInt(newItem.price),
       type: newItem.type,
       category: newItem.category,
-      requiresProcessing: newItem.requiresProcessing,
-      defaultProcessingDays: newItem.requiresProcessing ? parseInt(newItem.defaultProcessingDays) : null,
+      hasVariants: newItem.hasVariants,
+      variants: newItem.hasVariants ? newItem.variants : [],
       stock: newItem.type === 'product' ? (parseInt(newItem.stock) || 0) : null,
       duration: newItem.type === 'service' ? '約3-5天加工' : null,
       isPopular: newItem.isPopular
@@ -333,7 +341,10 @@ function App() {
   };
 
   const openEditItemModal = (item) => {
-    setEditingItem({ ...item });
+    setEditingItem({ 
+      ...item,
+      variants: item.variants || []
+    });
     setIsEditItemModalOpen(true);
   };
 
@@ -345,7 +356,10 @@ function App() {
 
     setItems(prev =>
       prev.map(item =>
-        item.id === editingItem.id ? { ...editingItem } : item
+        item.id === editingItem.id ? { 
+          ...editingItem,
+          variants: editingItem.hasVariants ? editingItem.variants : []
+        } : item
       )
     );
 
@@ -361,37 +375,73 @@ function App() {
     }
   };
 
+  // 加入購物車（含變體處理）
   const addToCart = (item) => {
+    if (item.hasVariants && item.variants && item.variants.length > 0) {
+      // 有變體 → 開啟選擇視窗
+      setSelectedItemForVariant(item);
+      setIsVariantModalOpen(true);
+    } else {
+      // 沒有變體 → 直接加入
+      if (item.type === 'product' && item.stock !== null) {
+        const inCart = cart.find(c => c.id === item.id);
+        if ((inCart ? inCart.qty : 0) + 1 > item.stock) {
+          showToast('庫存不足！', 'error');
+          return;
+        }
+      }
+      setCart(prev => [...prev, { ...item, qty: 1, selectedVariant: null }]);
+      showToast(`${item.name} 已加入購物車`, 'success');
+    }
+  };
+
+  // 確認選擇變體後加入購物車
+  const confirmVariantAndAddToCart = (variant) => {
+    const item = selectedItemForVariant;
+    if (!item) return;
+
     if (item.type === 'product' && item.stock !== null) {
-      const inCart = cart.find(c => c.id === item.id);
+      const inCart = cart.find(c => c.id === item.id && c.selectedVariant?.id === variant.id);
       if ((inCart ? inCart.qty : 0) + 1 > item.stock) {
         showToast('庫存不足！', 'error');
+        setIsVariantModalOpen(false);
+        setSelectedItemForVariant(null);
         return;
       }
     }
-    setCart(prev => {
-      const existing = prev.find(c => c.id === item.id);
-      if (existing) {
-        return prev.map(c => c.id === item.id ? { ...c, qty: c.qty + 1 } : c);
-      } else {
-        return [...prev, { ...item, qty: 1 }];
-      }
-    });
-    showToast(`${item.name} 已加入購物車`, 'success');
+
+    const cartItem = {
+      ...item,
+      qty: 1,
+      selectedVariant: variant
+    };
+
+    setCart(prev => [...prev, cartItem]);
+    showToast(`${item.name} - ${variant.name} 已加入購物車`, 'success');
+    
+    setIsVariantModalOpen(false);
+    setSelectedItemForVariant(null);
   };
 
-  const updateCartQty = (id, newQty) => {
+  const updateCartQty = (index, newQty) => {
     if (newQty < 1) return;
-    const item = items.find(i => i.id === id);
-    if (item?.type === 'product' && item.stock !== null && newQty > item.stock) {
+    const item = cart[index];
+    if (item.type === 'product' && item.stock !== null && newQty > item.stock) {
       showToast('超過可用庫存', 'error');
       return;
     }
-    setCart(prev => prev.map(item => item.id === id ? { ...item, qty: newQty } : item));
+    setCart(prev => prev.map((item, i) => i === index ? { ...item, qty: newQty } : item));
   };
 
-  const removeFromCart = (id) => setCart(prev => prev.filter(item => item.id !== id));
-  const clearCart = () => { setCart([]); setDiscountPercent(0); setPickupDate(''); };
+  const removeFromCart = (index) => {
+    setCart(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const clearCart = () => { 
+    setCart([]); 
+    setDiscountPercent(0); 
+    setPickupDate(''); 
+  };
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -434,17 +484,12 @@ function App() {
 
     const invoiceNumber = generateInvoiceNumber();
 
-    const txItems = cart.map(item => ({
-      ...item,
-      requiresProcessing: item.requiresProcessing || false
-    }));
-
     const newTransaction = {
       id: Date.now(),
       invoiceNumber,
       time: new Date().toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit' }),
       date: new Date().toISOString().split('T')[0],
-      items: txItems,
+      items: [...cart],
       subtotal, 
       discount: discountAmount, 
       total,
@@ -456,10 +501,12 @@ function App() {
       company: companyInfo
     };
 
+    // 更新庫存
     const updatedItems = items.map(item => {
-      const cartItem = cart.find(c => c.id === item.id);
-      if (cartItem && item.type === 'product' && item.stock !== null) {
-        return { ...item, stock: Math.max(0, item.stock - cartItem.qty) };
+      const cartItems = cart.filter(c => c.id === item.id);
+      if (cartItems.length > 0 && item.type === 'product' && item.stock !== null) {
+        const totalQty = cartItems.reduce((sum, c) => sum + c.qty, 0);
+        return { ...item, stock: Math.max(0, item.stock - totalQty) };
       }
       return item;
     });
@@ -538,14 +585,20 @@ function App() {
               </tr>
             </thead>
             <tbody>
-              ${transaction.items.map(item => `
-                <tr>
-                  <td>${item.name}</td>
-                  <td style="text-align:center;">${item.qty}</td>
-                  <td style="text-align:right;">HK$${item.price}</td>
-                  <td style="text-align:right;">HK$${(item.price * item.qty).toFixed(0)}</td>
-                </tr>
-              `).join('')}
+              ${transaction.items.map(item => {
+                const displayName = item.selectedVariant 
+                  ? `${item.name} - ${item.selectedVariant.name}` 
+                  : item.name;
+                const itemPrice = item.selectedVariant ? item.selectedVariant.price : item.price;
+                return `
+                  <tr>
+                    <td>${displayName}</td>
+                    <td style="text-align:center;">${item.qty}</td>
+                    <td style="text-align:right;">HK$${itemPrice}</td>
+                    <td style="text-align:right;">HK$${(itemPrice * item.qty).toFixed(0)}</td>
+                  </tr>
+                `;
+              }).join('')}
             </tbody>
           </table>
 
@@ -554,7 +607,7 @@ function App() {
             ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
             <strong style="font-size:14px;">總金額：HK$${transaction.total}</strong><br>
             支付方式：${transaction.paymentMethod}
-            ${transaction.pickupDate ? `<br>→ 取貨日期：${transaction.pickupDate}` : ''}
+            ${transaction.pickupDate ? `<br>→ 預計取貨日期：${transaction.pickupDate}` : ''}
           </div>
 
           <div class="thankyou">Thank you for your business!</div>
@@ -616,14 +669,20 @@ function App() {
               </tr>
             </thead>
             <tbody>
-              ${transaction.items.map(item => `
-                <tr>
-                  <td>${item.name}</td>
-                  <td style="text-align:center;">${item.qty}</td>
-                  <td style="text-align:right;">HK$${item.price}</td>
-                  <td style="text-align:right;">HK$${(item.price * item.qty).toFixed(0)}</td>
-                </tr>
-              `).join('')}
+              ${transaction.items.map(item => {
+                const displayName = item.selectedVariant 
+                  ? `${item.name} - ${item.selectedVariant.name}` 
+                  : item.name;
+                const itemPrice = item.selectedVariant ? item.selectedVariant.price : item.price;
+                return `
+                  <tr>
+                    <td>${displayName}</td>
+                    <td style="text-align:center;">${item.qty}</td>
+                    <td style="text-align:right;">HK$${itemPrice}</td>
+                    <td style="text-align:right;">HK$${(itemPrice * item.qty).toFixed(0)}</td>
+                  </tr>
+                `;
+              }).join('')}
             </tbody>
           </table>
 
@@ -632,7 +691,7 @@ function App() {
             ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
             <strong style="font-size:14px;">總金額：HK$${transaction.total}</strong><br>
             支付方式：${transaction.paymentMethod}
-            ${transaction.pickupDate ? `<br>→ 取貨日期：${transaction.pickupDate}` : ''}
+            ${transaction.pickupDate ? `<br>→ 預計取貨日期：${transaction.pickupDate}` : ''}
           </div>
 
           <div class="thankyou">Thank you for your business!</div>
@@ -648,7 +707,7 @@ function App() {
     const phone = transaction.customerPhone ? transaction.customerPhone.replace(/\s/g, '') : '';
     const hasPickup = transaction.pickupDate;
 
-    const message = `麗明珠真髮中心 訂單確認\n\n訂單編號：${transaction.invoiceNumber}\n客戶：${transaction.customerName || '尊貴客戶'}\n總金額：HK$${transaction.total}\n支付方式：${transaction.paymentMethod}\n${hasPickup ? `取貨日期：${transaction.pickupDate}\n` : ''}請查看附件發票。\n\n${companyInfo.name}\nTel: ${companyInfo.phone} ｜ WhatsApp: ${companyInfo.whatsapp}`;
+    const message = `麗明珠真髮中心 訂單確認\n\n訂單編號：${transaction.invoiceNumber}\n客戶：${transaction.customerName || '尊貴客戶'}\n總金額：HK$${transaction.total}\n支付方式：${transaction.paymentMethod}\n${hasPickup ? `預計取貨日期：${transaction.pickupDate}\n` : ''}請查看附件發票。\n\n${companyInfo.name}\nTel: ${companyInfo.phone} ｜ WhatsApp: ${companyInfo.whatsapp}`;
 
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = phone ? `https://wa.me/${phone}?text=${encodedMessage}` : `https://wa.me/?text=${encodedMessage}`;
@@ -672,6 +731,22 @@ function App() {
     tempDiv.style.fontSize = '11px';
     tempDiv.style.lineHeight = '1.5';
     tempDiv.style.color = '#374151';
+
+    let itemsHTML = '';
+    transaction.items.forEach(item => {
+      const displayName = item.selectedVariant 
+        ? `${item.name} - ${item.selectedVariant.name}` 
+        : item.name;
+      const itemPrice = item.selectedVariant ? item.selectedVariant.price : item.price;
+      itemsHTML += `
+        <tr style="border-bottom:1px solid #f1f5f9;">
+          <td style="padding:7px 8px;">${displayName}</td>
+          <td style="padding:7px 8px; text-align:center;">${item.qty}</td>
+          <td style="padding:7px 8px; text-align:right;">HK$${itemPrice}</td>
+          <td style="padding:7px 8px; text-align:right;">HK$${(itemPrice * item.qty).toFixed(0)}</td>
+        </tr>
+      `;
+    });
 
     tempDiv.innerHTML = `
       <div style="text-align:center; margin-bottom:8px">
@@ -704,14 +779,7 @@ function App() {
           </tr>
         </thead>
         <tbody>
-          ${transaction.items.map(item => `
-            <tr style="border-bottom:1px solid #f1f5f9;">
-              <td style="padding:7px 8px;">${item.name}</td>
-              <td style="padding:7px 8px; text-align:center;">${item.qty}</td>
-              <td style="padding:7px 8px; text-align:right;">HK$${item.price}</td>
-              <td style="padding:7px 8px; text-align:right;">HK$${(item.price * item.qty).toFixed(0)}</td>
-            </tr>
-          `).join('')}
+          ${itemsHTML}
         </tbody>
       </table>
 
@@ -720,7 +788,7 @@ function App() {
         ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
         <strong style="font-size:14px;">總金額：HK$${transaction.total}</strong><br>
         支付方式：${transaction.paymentMethod}
-        ${transaction.pickupDate ? `<br>→ 取貨日期：${transaction.pickupDate}` : ''}
+        ${transaction.pickupDate ? `<br>→ 預計取貨日期：${transaction.pickupDate}` : ''}
       </div>
 
       <div style="text-align:right; font-size:12px; color:#6b7280; margin-top:10px;">
@@ -761,6 +829,22 @@ function App() {
     tempDiv.style.lineHeight = '1.5';
     tempDiv.style.color = '#374151';
 
+    let itemsHTML = '';
+    transaction.items.forEach(item => {
+      const displayName = item.selectedVariant 
+        ? `${item.name} - ${item.selectedVariant.name}` 
+        : item.name;
+      const itemPrice = item.selectedVariant ? item.selectedVariant.price : item.price;
+      itemsHTML += `
+        <tr style="border-bottom:1px solid #f1f5f9;">
+          <td style="padding:7px 8px;">${displayName}</td>
+          <td style="padding:7px 8px; text-align:center;">${item.qty}</td>
+          <td style="padding:7px 8px; text-align:right;">HK$${itemPrice}</td>
+          <td style="padding:7px 8px; text-align:right;">HK$${(itemPrice * item.qty).toFixed(0)}</td>
+        </tr>
+      `;
+    });
+
     tempDiv.innerHTML = `
       <div style="text-align:center; margin-bottom:8px">
         <img src="/logo.png" style="height:155px; margin-bottom:8px; display:block; margin-left:auto; margin-right:auto;" />
@@ -792,14 +876,7 @@ function App() {
           </tr>
         </thead>
         <tbody>
-          ${transaction.items.map(item => `
-            <tr style="border-bottom:1px solid #f1f5f9;">
-              <td style="padding:7px 8px;">${item.name}</td>
-              <td style="padding:7px 8px; text-align:center;">${item.qty}</td>
-              <td style="padding:7px 8px; text-align:right;">HK$${item.price}</td>
-              <td style="padding:7px 8px; text-align:right;">HK$${(item.price * item.qty).toFixed(0)}</td>
-            </tr>
-          `).join('')}
+          ${itemsHTML}
         </tbody>
       </table>
 
@@ -808,7 +885,7 @@ function App() {
         ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
         <span style="font-size:14px; font-weight:700;">總金額：HK$${transaction.total}</span><br>
         <span style="font-size:10px;">支付方式：${transaction.paymentMethod}</span>
-        ${transaction.pickupDate ? `<br>→ 取貨日期：${transaction.pickupDate}` : ''}
+        ${transaction.pickupDate ? `<br>→ 預計取貨日期：${transaction.pickupDate}` : ''}
       </div>
 
       <div style="text-align:right; font-size:12px; color:#6b7280; margin-top:10px;">
@@ -842,7 +919,13 @@ function App() {
     }
 
     const data = filteredTransactions.map(tx => {
-      const itemsText = tx.items.map(item => `${item.name} x${item.qty}`).join(', ');
+      const itemsText = tx.items.map(item => {
+        const displayName = item.selectedVariant 
+          ? `${item.name} - ${item.selectedVariant.name}` 
+          : item.name;
+        return `${displayName} x${item.qty}`;
+      }).join(', ');
+
       return {
         '日期': tx.date,
         '發票編號': tx.invoiceNumber,
@@ -853,7 +936,7 @@ function App() {
         '折扣': tx.discount,
         '總金額': tx.total,
         '支付方式': tx.paymentMethod,
-        '取貨日期': tx.pickupDate || '-'
+        '預計取貨日期': tx.pickupDate || '-'
       };
     });
 
@@ -913,6 +996,9 @@ function App() {
                     <div className="font-semibold mb-1 pr-12">{item.name}</div>
                     <div className="text-sm text-slate-500 mb-2">{item.category}</div>
                     <div className="text-2xl font-bold">HK${item.price}</div>
+                    {item.hasVariants && item.variants.length > 0 && (
+                      <div className="text-xs text-emerald-600 mt-1">有 {item.variants.length} 個變體</div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -948,19 +1034,26 @@ function App() {
               </div>
 
               {cart.length > 0 ? (
-                cart.map(item => (
-                  <div key={item.id} className="border rounded-xl p-3 mb-2">
-                    <div className="flex justify-between text-sm">
-                      <div>{item.name} × {item.qty}</div>
-                      <div>HK$${(item.price * item.qty).toFixed(0)}</div>
+                cart.map((item, index) => {
+                  const displayName = item.selectedVariant 
+                    ? `${item.name} - ${item.selectedVariant.name}` 
+                    : item.name;
+                  const itemPrice = item.selectedVariant ? item.selectedVariant.price : item.price;
+
+                  return (
+                    <div key={index} className="border rounded-xl p-3 mb-2">
+                      <div className="flex justify-between text-sm">
+                        <div>{displayName} × {item.qty}</div>
+                        <div>HK$${(itemPrice * item.qty).toFixed(0)}</div>
+                      </div>
+                      <div className="flex gap-2 mt-2">
+                        <button onClick={() => updateCartQty(index, item.qty - 1)} className="px-2 border rounded text-sm">-</button>
+                        <button onClick={() => updateCartQty(index, item.qty + 1)} className="px-2 border rounded text-sm">+</button>
+                        <button onClick={() => removeFromCart(index)} className="ml-auto text-red-500 text-xs">移除</button>
+                      </div>
                     </div>
-                    <div className="flex gap-2 mt-2">
-                      <button onClick={() => updateCartQty(item.id, item.qty - 1)} className="px-2 border rounded text-sm">-</button>
-                      <button onClick={() => updateCartQty(item.id, item.qty + 1)} className="px-2 border rounded text-sm">+</button>
-                      <button onClick={() => removeFromCart(item.id)} className="ml-auto text-red-500 text-xs">移除</button>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <p className="text-center text-slate-400 py-4">購物車是空的</p>
               )}
@@ -1255,9 +1348,9 @@ function App() {
               {selectedCustomerForCheckout && <div className="mt-2 text-sm text-emerald-600">已選擇：{selectedCustomerForCheckout.name}</div>}
             </div>
 
-            {/* 取貨日期（選填） */}
+            {/* 預計取貨日期（選填） */}
             <div className="mb-6">
-              <label className="text-sm font-medium text-slate-600 block mb-2">取貨日期（選填）</label>
+              <label className="text-sm font-medium text-slate-600 block mb-2">預計取貨日期（選填）</label>
               <input 
                 type="date" 
                 value={pickupDate} 
@@ -1349,27 +1442,84 @@ function App() {
                 <label className="text-sm font-medium text-slate-600">類別</label>
                 <input type="text" value={newItem.category} onChange={e => setNewItem({...newItem, category: e.target.value})} className="w-full border p-3 rounded-xl mt-1" placeholder="假髮 / 洗護服務" />
               </div>
+
+              {/* 變體設定 */}
+              <div className="pt-2">
+                <div className="flex items-center gap-3 mb-2">
+                  <input 
+                    type="checkbox" 
+                    checked={newItem.hasVariants} 
+                    onChange={e => setNewItem({...newItem, hasVariants: e.target.checked, variants: e.target.checked ? newItem.variants : []})} 
+                  />
+                  <span className="text-sm font-medium">啟用變體</span>
+                </div>
+
+                {newItem.hasVariants && (
+                  <div className="border rounded-xl p-3 space-y-3">
+                    <div className="text-xs text-slate-500">變體列表（至少新增一個）</div>
+                    {newItem.variants.map((variant, index) => (
+                      <div key={index} className="flex gap-2">
+                        <input 
+                          type="text" 
+                          placeholder="變體名稱" 
+                          value={variant.name} 
+                          onChange={e => {
+                            const newVariants = [...newItem.variants];
+                            newVariants[index].name = e.target.value;
+                            setNewItem({...newItem, variants: newVariants});
+                          }} 
+                          className="flex-1 border p-2 rounded text-sm" 
+                        />
+                        <input 
+                          type="number" 
+                          placeholder="價格" 
+                          value={variant.price} 
+                          onChange={e => {
+                            const newVariants = [...newItem.variants];
+                            newVariants[index].price = parseInt(e.target.value) || 0;
+                            setNewItem({...newItem, variants: newVariants});
+                          }} 
+                          className="w-24 border p-2 rounded text-sm" 
+                        />
+                        <button 
+                          onClick={() => {
+                            const newVariants = newItem.variants.filter((_, i) => i !== index);
+                            setNewItem({...newItem, variants: newVariants});
+                          }} 
+                          className="px-3 text-red-500 text-sm"
+                        >
+                          刪除
+                        </button>
+                      </div>
+                    ))}
+                    <button 
+                      onClick={() => {
+                        setNewItem({
+                          ...newItem, 
+                          variants: [...newItem.variants, { id: Date.now(), name: '', price: 0 }]
+                        });
+                      }} 
+                      className="text-sm text-rose-600 hover:underline"
+                    >
+                      + 新增變體
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {newItem.type === 'product' && (
                 <div>
                   <label className="text-sm font-medium text-slate-600">初始庫存</label>
                   <input type="number" value={newItem.stock} onChange={e => setNewItem({...newItem, stock: e.target.value})} className="w-full border p-3 rounded-xl mt-1" placeholder="10" />
                 </div>
               )}
+
               <div className="flex items-center gap-3 pt-2">
                 <input type="checkbox" checked={newItem.isPopular} onChange={e => setNewItem({...newItem, isPopular: e.target.checked})} />
                 <span className="text-sm">設為常用項目</span>
               </div>
-              <div className="flex items-center gap-3 pt-2">
-                <input type="checkbox" checked={newItem.requiresProcessing} onChange={e => setNewItem({...newItem, requiresProcessing: e.target.checked})} />
-                <span className="text-sm">需要加工</span>
-              </div>
-              {newItem.requiresProcessing && (
-                <div>
-                  <label className="text-sm font-medium text-slate-600">加工天數</label>
-                  <input type="number" value={newItem.defaultProcessingDays} onChange={e => setNewItem({...newItem, defaultProcessingDays: e.target.value})} className="w-full border p-3 rounded-xl mt-1" />
-                </div>
-              )}
             </div>
+
             <div className="flex gap-3 mt-8">
               <button onClick={() => setIsAddItemModalOpen(false)} className="flex-1 py-3 border rounded-xl">取消</button>
               <button onClick={handleAddItem} className="flex-1 py-3 bg-rose-600 text-white rounded-xl">確認新增</button>
@@ -1419,31 +1569,109 @@ function App() {
                 <label className="text-sm font-medium text-slate-600">類別</label>
                 <input type="text" value={editingItem.category} onChange={e => setEditingItem({...editingItem, category: e.target.value})} className="w-full border p-3 rounded-xl mt-1" />
               </div>
+
+              {/* 變體設定（編輯） */}
+              <div className="pt-2">
+                <div className="flex items-center gap-3 mb-2">
+                  <input 
+                    type="checkbox" 
+                    checked={editingItem.hasVariants} 
+                    onChange={e => setEditingItem({...editingItem, hasVariants: e.target.checked})} 
+                  />
+                  <span className="text-sm font-medium">啟用變體</span>
+                </div>
+
+                {editingItem.hasVariants && (
+                  <div className="border rounded-xl p-3 space-y-3">
+                    {editingItem.variants && editingItem.variants.map((variant, index) => (
+                      <div key={index} className="flex gap-2">
+                        <input 
+                          type="text" 
+                          placeholder="變體名稱" 
+                          value={variant.name} 
+                          onChange={e => {
+                            const newVariants = [...editingItem.variants];
+                            newVariants[index].name = e.target.value;
+                            setEditingItem({...editingItem, variants: newVariants});
+                          }} 
+                          className="flex-1 border p-2 rounded text-sm" 
+                        />
+                        <input 
+                          type="number" 
+                          placeholder="價格" 
+                          value={variant.price} 
+                          onChange={e => {
+                            const newVariants = [...editingItem.variants];
+                            newVariants[index].price = parseInt(e.target.value) || 0;
+                            setEditingItem({...editingItem, variants: newVariants});
+                          }} 
+                          className="w-24 border p-2 rounded text-sm" 
+                        />
+                        <button 
+                          onClick={() => {
+                            const newVariants = editingItem.variants.filter((_, i) => i !== index);
+                            setEditingItem({...editingItem, variants: newVariants});
+                          }} 
+                          className="px-3 text-red-500 text-sm"
+                        >
+                          刪除
+                        </button>
+                      </div>
+                    ))}
+                    <button 
+                      onClick={() => {
+                        setEditingItem({
+                          ...editingItem, 
+                          variants: [...(editingItem.variants || []), { id: Date.now(), name: '', price: 0 }]
+                        });
+                      }} 
+                      className="text-sm text-rose-600 hover:underline"
+                    >
+                      + 新增變體
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {editingItem.type === 'product' && (
                 <div>
                   <label className="text-sm font-medium text-slate-600">庫存</label>
                   <input type="number" value={editingItem.stock} onChange={e => setEditingItem({...editingItem, stock: e.target.value})} className="w-full border p-3 rounded-xl mt-1" />
                 </div>
               )}
+
               <div className="flex items-center gap-3 pt-2">
                 <input type="checkbox" checked={editingItem.isPopular} onChange={e => setEditingItem({...editingItem, isPopular: e.target.checked})} />
                 <span className="text-sm">設為常用項目</span>
               </div>
-              <div className="flex items-center gap-3 pt-2">
-                <input type="checkbox" checked={editingItem.requiresProcessing} onChange={e => setEditingItem({...editingItem, requiresProcessing: e.target.checked})} />
-                <span className="text-sm">需要加工</span>
-              </div>
-              {editingItem.requiresProcessing && (
-                <div>
-                  <label className="text-sm font-medium text-slate-600">加工天數</label>
-                  <input type="number" value={editingItem.defaultProcessingDays} onChange={e => setEditingItem({...editingItem, defaultProcessingDays: e.target.value})} className="w-full border p-3 rounded-xl mt-1" />
-                </div>
-              )}
             </div>
+
             <div className="flex gap-3 mt-8">
               <button onClick={() => setIsEditItemModalOpen(false)} className="flex-1 py-3 border rounded-xl">取消</button>
               <button onClick={handleEditItem} className="flex-1 py-3 bg-rose-600 text-white rounded-xl">儲存修改</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 變體選擇 Modal */}
+      {isVariantModalOpen && selectedItemForVariant && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setIsVariantModalOpen(false)}>
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <h3 className="text-xl font-bold mb-4 text-center">請選擇變體</h3>
+            <div className="space-y-2">
+              {selectedItemForVariant.variants.map(variant => (
+                <button 
+                  key={variant.id} 
+                  onClick={() => confirmVariantAndAddToCart(variant)}
+                  className="w-full text-left p-4 border rounded-xl hover:bg-rose-50 flex justify-between items-center"
+                >
+                  <span>{variant.name}</span>
+                  <span className="font-semibold">HK${variant.price}</span>
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setIsVariantModalOpen(false)} className="mt-4 w-full py-2 text-sm text-slate-500">取消</button>
           </div>
         </div>
       )}
@@ -1491,7 +1719,12 @@ function App() {
                           <td>{tx.date}</td>
                           <td className="font-mono text-sm">{tx.invoiceNumber}</td>
                           <td className="text-sm">
-                            {tx.items.map(i => i.name).join(', ')}
+                            {tx.items.map(i => {
+                              const displayName = i.selectedVariant 
+                                ? `${i.name} - ${i.selectedVariant.name}` 
+                                : i.name;
+                              return displayName;
+                            }).join(', ')}
                           </td>
                           <td className="text-right font-semibold">HK${tx.total}</td>
                         </tr>
@@ -1509,7 +1742,7 @@ function App() {
           </div>
         </div>
       )}
-      {toast && <div className="fixed bottom-6 right-6 bg-slate-900 text-white px-6 py-3 rounded-2xl">{toast.message}</div>}
+            {toast && <div className="fixed bottom-6 right-6 bg-slate-900 text-white px-6 py-3 rounded-2xl">{toast.message}</div>}
     </div>
   );
 }

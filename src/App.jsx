@@ -554,7 +554,7 @@ function App() {
             ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
             <strong style="font-size:14px;">總金額：HK$${transaction.total}</strong><br>
             支付方式：${transaction.paymentMethod}
-            ${transaction.pickupDate ? `<br>→ 預計取貨日期：${transaction.pickupDate}` : ''}
+            ${transaction.pickupDate ? `<br>→ 取貨日期：${transaction.pickupDate}` : ''}
           </div>
 
           <div class="thankyou">Thank you for your business!</div>
@@ -632,7 +632,7 @@ function App() {
             ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
             <strong style="font-size:14px;">總金額：HK$${transaction.total}</strong><br>
             支付方式：${transaction.paymentMethod}
-            ${transaction.pickupDate ? `<br>→ 預計取貨日期：${transaction.pickupDate}` : ''}
+            ${transaction.pickupDate ? `<br>→ 取貨日期：${transaction.pickupDate}` : ''}
           </div>
 
           <div class="thankyou">Thank you for your business!</div>
@@ -648,7 +648,7 @@ function App() {
     const phone = transaction.customerPhone ? transaction.customerPhone.replace(/\s/g, '') : '';
     const hasPickup = transaction.pickupDate;
 
-    const message = `麗明珠真髮中心 訂單確認\n\n訂單編號：${transaction.invoiceNumber}\n客戶：${transaction.customerName || '尊貴客戶'}\n總金額：HK$${transaction.total}\n支付方式：${transaction.paymentMethod}\n${hasPickup ? `預計取貨日期：${transaction.pickupDate}\n` : ''}請查看附件發票。\n\n${companyInfo.name}\nTel: ${companyInfo.phone} ｜ WhatsApp: ${companyInfo.whatsapp}`;
+    const message = `麗明珠真髮中心 訂單確認\n\n訂單編號：${transaction.invoiceNumber}\n客戶：${transaction.customerName || '尊貴客戶'}\n總金額：HK$${transaction.total}\n支付方式：${transaction.paymentMethod}\n${hasPickup ? `取貨日期：${transaction.pickupDate}\n` : ''}請查看附件發票。\n\n${companyInfo.name}\nTel: ${companyInfo.phone} ｜ WhatsApp: ${companyInfo.whatsapp}`;
 
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = phone ? `https://wa.me/${phone}?text=${encodedMessage}` : `https://wa.me/?text=${encodedMessage}`;
@@ -720,7 +720,7 @@ function App() {
         ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
         <strong style="font-size:14px;">總金額：HK$${transaction.total}</strong><br>
         支付方式：${transaction.paymentMethod}
-        ${transaction.pickupDate ? `<br>→ 預計取貨日期：${transaction.pickupDate}` : ''}
+        ${transaction.pickupDate ? `<br>→ 取貨日期：${transaction.pickupDate}` : ''}
       </div>
 
       <div style="text-align:right; font-size:12px; color:#6b7280; margin-top:10px;">
@@ -808,7 +808,7 @@ function App() {
         ${transaction.discount > 0 ? `折扣：-HK$${transaction.discount}<br>` : ''}
         <span style="font-size:14px; font-weight:700;">總金額：HK$${transaction.total}</span><br>
         <span style="font-size:10px;">支付方式：${transaction.paymentMethod}</span>
-        ${transaction.pickupDate ? `<br>→ 預計取貨日期：${transaction.pickupDate}` : ''}
+        ${transaction.pickupDate ? `<br>→ 取貨日期：${transaction.pickupDate}` : ''}
       </div>
 
       <div style="text-align:right; font-size:12px; color:#6b7280; margin-top:10px;">
@@ -853,7 +853,7 @@ function App() {
         '折扣': tx.discount,
         '總金額': tx.total,
         '支付方式': tx.paymentMethod,
-        '預計取貨日期': tx.pickupDate || '-'
+        '取貨日期': tx.pickupDate || '-'
       };
     });
 
@@ -1255,9 +1255,9 @@ function App() {
               {selectedCustomerForCheckout && <div className="mt-2 text-sm text-emerald-600">已選擇：{selectedCustomerForCheckout.name}</div>}
             </div>
 
-            {/* 預計取貨日期（選填） */}
+            {/* 取貨日期（選填） */}
             <div className="mb-6">
-              <label className="text-sm font-medium text-slate-600 block mb-2">預計取貨日期（選填）</label>
+              <label className="text-sm font-medium text-slate-600 block mb-2">取貨日期（選填）</label>
               <input 
                 type="date" 
                 value={pickupDate} 

@@ -818,10 +818,6 @@ function App() {
         We will handle wigs with care during cleaning. However, the company is not liable for damage or loss caused by natural disasters or other events beyond our control.<br>
         本公司在為客人清洗假髮時會小心處理；但若因天災或其他不可抗力之事由導致損壞或遺失，本公司概不負責。
       </div>
-
-      <div style="text-align:right; font-size:11px; color:#6b7280; margin-top:8px;">
-        Thank you for your business!
-      </div>
     `;
 
     document.body.appendChild(tempDiv);
@@ -923,10 +919,6 @@ function App() {
         <strong style="font-size:9px;">清洗處理及天災責任 / Cleaning and Force Majeure</strong><br>
         We will handle wigs with care during cleaning. However, the company is not liable for damage or loss caused by natural disasters or other events beyond our control.<br>
         本公司在為客人清洗假髮時會小心處理；但若因天災或其他不可抗力之事由導致損壞或遺失，本公司概不負責。
-      </div>
-
-      <div style="text-align:right; font-size:11px; color:#6b7280; margin-top:8px;">
-        Thank you for your business!
       </div>
     `;
 
@@ -1032,8 +1024,6 @@ function App() {
             We will handle wigs with care during cleaning. However, the company is not liable for damage or loss caused by natural disasters or other events beyond our control.<br>
             本公司在為客人清洗假髮時會小心處理；但若因天災或其他不可抗力之事由導致損壞或遺失，本公司概不負責。
           </div>
-
-          <div class="thankyou">Thank you for your business!</div>
         </body>
       </html>
     `);
@@ -1129,8 +1119,6 @@ function App() {
             We will handle wigs with care during cleaning. However, the company is not liable for damage or loss caused by natural disasters or other events beyond our control.<br>
             本公司在為客人清洗假髮時會小心處理；但若因天災或其他不可抗力之事由導致損壞或遺失，本公司概不負責。
           </div>
-
-          <div class="thankyou">Thank you for your business!</div>
         </body>
       </html>
     `);

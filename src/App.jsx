@@ -877,7 +877,177 @@ function App() {
     const whatsappUrl = phone ? `https://wa.me/${phone}?text=${encodedMessage}` : `https://wa.me/?text=${encodedMessage}`;
     window.open(whatsappUrl, '_blank');
   };
+  // ==================== 預約相關函數（補充） ====================
+  const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
+  const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
 
+  const generateCalendarDays = () => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const daysInMonth = getDaysInMonth(year, month);
+    const firstDay = getFirstDayOfMonth(year, month);
+    const days = [];
+
+    for (let i = 0; i < firstDay; i++) {
+      days.push({ day: null, isCurrentMonth: false });
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      days.push({
+        day,
+        isCurrentMonth: true,
+        dateStr,
+        hasAppointment: appointments.some(a => a.date === dateStr)
+      });
+    }
+    return days;
+  };
+
+  const changeMonth = (delta) => {
+    const newMonth = new Date(currentMonth);
+    newMonth.setMonth(newMonth.getMonth() + delta);
+    setCurrentMonth(newMonth);
+  };
+
+  const selectCalendarDate = (dateStr) => {
+    setSelectedDate(dateStr);
+  };
+  // ==================== 客戶匯出/匯入完整函數 ====================
+  const exportCustomersTransactionsCSV = () => {
+    if (transactions.length === 0) {
+      showToast('目前沒有消費記錄可匯出', 'error');
+      return;
+    }
+
+    const csvData = transactions.map(tx => {
+      const itemsText = tx.items.map(item => {
+        const displayName = item.selectedVariant 
+          ? `${item.name} - ${item.selectedVariant.name}` 
+          : item.name;
+        return `${displayName} x${item.qty}`;
+      }).join(' | ');
+
+      return {
+        '客戶姓名': tx.customerName || '-',
+        '電話': tx.customerPhone || '-',
+        '發票編號': tx.invoiceNumber,
+        '發票日期': tx.date,
+        '購買項目': itemsText,
+        '小計': tx.subtotal,
+        '折扣': tx.discount || 0,
+        '調整金額': tx.adjustment || 0,
+        '總金額': tx.total,
+        '支付方式': tx.paymentMethod,
+        '預計取貨日期': tx.pickupDate || '-',
+        '來源渠道': tx.channel || '-'
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(csvData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "客戶消費記錄");
+
+    const fileName = `客戶消費記錄_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+
+    showToast(`已成功匯出 ${transactions.length} 筆消費記錄`, 'success');
+  };
+
+  const importCustomersTransactionsCSV = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv';
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const csvText = event.target.result;
+          const lines = csvText.trim().split('\n');
+          const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+
+          let importedCount = 0;
+          let updatedCount = 0;
+          let newCustomersCount = 0;
+
+          const newTransactions = [...transactions];
+          const newCustomersList = [...customers];
+
+          for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+            if (values.length < headers.length) continue;
+
+            const row = {};
+            headers.forEach((header, index) => {
+              row[header] = values[index] || '';
+            });
+
+            const invoiceNumber = row['發票編號'] || row['Invoice Number'] || '';
+            if (!invoiceNumber) continue;
+
+            let customerName = row['客戶姓名'] || row['Customer Name'] || '';
+            let customerPhone = row['電話'] || row['Phone'] || '';
+
+            let existingCustomer = newCustomersList.find(c => 
+              c.name === customerName && c.phone === customerPhone
+            );
+
+            if (!existingCustomer && customerName) {
+              const newCust = { 
+                id: Date.now() + i, 
+                name: customerName, 
+                phone: customerPhone 
+              };
+              newCustomersList.push(newCust);
+              existingCustomer = newCust;
+              newCustomersCount++;
+            }
+
+            const newTx = {
+              id: Date.now() + i,
+              invoiceNumber: invoiceNumber,
+              time: row['時間'] || new Date().toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit' }),
+              date: row['發票日期'] || row['Invoice Date'] || new Date().toISOString().split('T')[0],
+              items: [{ name: row['購買項目'] || 'Imported Item', qty: 1, price: parseFloat(row['總金額']) || 0, selectedVariant: null }],
+              subtotal: parseFloat(row['小計']) || parseFloat(row['總金額']) || 0,
+              discount: parseFloat(row['折扣']) || 0,
+              adjustment: parseFloat(row['調整金額']) || 0,
+              total: parseFloat(row['總金額']) || 0,
+              paymentMethod: row['支付方式'] || '現金',
+              change: 0,
+              customerName: customerName || null,
+              customerPhone: customerPhone || null,
+              pickupDate: row['預計取貨日期'] || null,
+              channel: row['來源渠道'] || null,
+              company: companyInfo
+            };
+            const existingIndex = newTransactions.findIndex(tx => tx.invoiceNumber === invoiceNumber);
+            if (existingIndex !== -1) {
+              newTransactions[existingIndex] = newTx;
+              updatedCount++;
+            } else {
+              newTransactions.push(newTx);
+              importedCount++;
+            }
+          }
+
+          setTransactions(newTransactions);
+          setCustomers(newCustomersList);
+
+          showToast(`匯入完成：新增 ${importedCount} 筆，更新 ${updatedCount} 筆，新增客戶 ${newCustomersCount} 位`, 'success');
+
+        } catch (error) {
+          showToast('CSV 解析失敗，請確認檔案格式', 'error');
+          console.error(error);
+        }
+      };
+      reader.readAsText(file, 'UTF-8');
+    };
+    input.click();
+  };
   const exportToExcel = () => {
     let filteredTransactions = [...transactions];
     if (startDate) filteredTransactions = filteredTransactions.filter(tx => tx.date >= startDate);

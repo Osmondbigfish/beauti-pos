@@ -1513,10 +1513,16 @@ function App() {
                           <td className="text-right font-semibold">HK${tx.total}</td>
                           <td><span className="text-xs px-3 py-1 bg-slate-100 rounded-full">{tx.paymentMethod}</span></td>
                           <td className="text-xs text-slate-500">{tx.channel || '-'}</td>
-                          <td className="text-center">
+                                                   <td className="text-center">
                             <div className="flex justify-center gap-2">
                               <button onClick={() => generateReceiptPDF(tx)} className="text-xs px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg">Receipt</button>
                               <button onClick={() => generateInvoicePDF(tx)} className="text-xs px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg">Invoice</button>
+                              <button 
+                                onClick={() => deleteTransaction(tx.id)} 
+                                className="text-xs px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg"
+                              >
+                                刪除
+                              </button>
                             </div>
                           </td>
                         </tr>

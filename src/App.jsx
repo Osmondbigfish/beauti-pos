@@ -1219,6 +1219,32 @@ function App() {
         '來源渠道': tx.channel || '-'
       };
     });
+      // 刪除訂單（含歸還庫存）
+  const deleteTransaction = (id) => {
+    if (!window.confirm('確定要刪除此訂單嗎？刪除後將自動歸還商品庫存。')) {
+      return;
+    }
+
+    const transactionToDelete = transactions.find(tx => tx.id === id);
+    if (!transactionToDelete) return;
+
+    // 歸還商品庫存
+    const updatedItems = items.map(item => {
+      const cartItems = transactionToDelete.items.filter(c => c.id === item.id);
+      if (cartItems.length > 0 && item.type === 'product' && item.stock !== null) {
+        const totalQty = cartItems.reduce((sum, c) => sum + c.qty, 0);
+        return { ...item, stock: item.stock + totalQty };
+      }
+      return item;
+    });
+
+    setItems(updatedItems);
+
+    // 刪除訂單
+    setTransactions(prev => prev.filter(tx => tx.id !== id));
+
+    showToast('訂單已刪除，庫存已歸還', 'success');
+  };
 
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();

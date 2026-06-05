@@ -1048,6 +1048,31 @@ function App() {
     };
     input.click();
   };
+    // ==================== 客戶相關函數（補充） ====================
+  const openAddCustomerModal = () => {
+    setNewCustomer({ name: '', phone: '' });
+    setIsAddCustomerModalOpen(true);
+  };
+
+  const handleAddCustomer = () => {
+    if (!newCustomer.name) {
+      showToast('請輸入客戶姓名', 'error');
+      return;
+    }
+    const exists = customers.some(c => c.name === newCustomer.name && c.phone === newCustomer.phone);
+    if (exists) {
+      showToast('此客戶已存在', 'error');
+      return;
+    }
+    const newCust = { 
+      id: Date.now(), 
+      name: newCustomer.name.trim(), 
+      phone: newCustomer.phone.trim() 
+    };
+    setCustomers(prev => [...prev, newCust]);
+    setIsAddCustomerModalOpen(false);
+    showToast('客戶新增成功！', 'success');
+  };女
   const exportToExcel = () => {
     let filteredTransactions = [...transactions];
     if (startDate) filteredTransactions = filteredTransactions.filter(tx => tx.date >= startDate);

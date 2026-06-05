@@ -1220,6 +1220,7 @@ function App() {
       };
     });
       // 刪除訂單（含歸還庫存）
+    // 刪除訂單（含歸還庫存）
   const deleteTransaction = (id) => {
     if (!window.confirm('確定要刪除此訂單嗎？刪除後將自動歸還商品庫存。')) {
       return;

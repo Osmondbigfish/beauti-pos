@@ -180,7 +180,7 @@ function App() {
   }, 0);
   const finalTotal = subtotal - discountAmount + adjustment;
 
-  // ==================== Handler 函數（完整版） ====================
+  // ==================== 所有 Handler 函數 ====================
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -424,6 +424,42 @@ function App() {
     return getAppointmentsForDate(hkToday);
   };
 
+  const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
+  const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
+
+  const generateCalendarDays = () => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const daysInMonth = getDaysInMonth(year, month);
+    const firstDay = getFirstDayOfMonth(year, month);
+    const days = [];
+
+    for (let i = 0; i < firstDay; i++) {
+      days.push({ day: null, isCurrentMonth: false });
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      days.push({
+        day,
+        isCurrentMonth: true,
+        dateStr,
+        hasAppointment: appointments.some(a => a.date === dateStr)
+      });
+    }
+    return days;
+  };
+
+  const changeMonth = (delta) => {
+    const newMonth = new Date(currentMonth);
+    newMonth.setMonth(newMonth.getMonth() + delta);
+    setCurrentMonth(newMonth);
+  };
+
+  const selectCalendarDate = (dateStr) => {
+    setSelectedDate(dateStr);
+  };
+
   const openAddAppointment = () => {
     setNewAppointment({
       customerName: '',
@@ -471,449 +507,32 @@ function App() {
       showToast('預約已刪除', 'success');
     }
   };
-  // 其餘 handler 函數已在上方完整定義
-  const generateInvoicePDF = async (transaction) => {
-    const margin = 4;
-    const pageWidth = 148;
-    const contentWidth = pageWidth - (margin * 2);
 
-    const tempDiv = document.createElement('div');
-    tempDiv.style.position = 'absolute';
-    tempDiv.style.left = '-9999px';
-    tempDiv.style.width = `${contentWidth}mm`;
-    tempDiv.style.padding = '4mm 5mm';
-    tempDiv.style.background = '#ffffff';
-    tempDiv.style.fontFamily = '"Noto Sans TC", "PingFang TC", system-ui, sans-serif';
-    tempDiv.style.fontSize = '11px';
-    tempDiv.style.lineHeight = '1.45';
-    tempDiv.style.color = '#374151';
-
-    let itemsHTML = '';
-    transaction.items.forEach(item => {
-      const displayName = item.selectedVariant 
-        ? `${item.name} - ${item.selectedVariant.name}` 
-        : item.name;
-      const itemPrice = item.selectedVariant ? item.selectedVariant.price : item.price;
-      itemsHTML += `
-        <tr style="border-bottom:1px solid #f1f5f9;">
-          <td style="padding:6px 6px;">${displayName}</td>
-          <td style="padding:6px 6px; text-align:center;">${item.qty}</td>
-          <td style="padding:6px 6px; text-align:right;">HK$${itemPrice}</td>
-          <td style="padding:6px 6px; text-align:right;">HK$${(itemPrice * item.qty).toFixed(0)}</td>
-        </tr>
-      `;
-    });
-
-    tempDiv.innerHTML = `
-      <div style="text-align:center; margin-bottom:4px">
-        <img src="/logo.png" style="height:135px; margin-bottom:2px; display:block; margin-left:auto; margin-right:auto;" />
-        <div style="font-size:21px; font-weight:700;">INVOICE</div>
-      </div>
-
-      <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:10px;">
-        <div>
-          <strong style="font-size:9px; color:#6b7280;">BILLED TO</strong><br>
-          ${transaction.customerName || '客戶'}<br>
-          ${transaction.customerPhone || ''}
-        </div>
-        <div style="text-align:right;">
-          <strong style="font-size:9px; color:#6b7280;">INVOICE NO</strong><br>
-          ${transaction.invoiceNumber}<br>
-          <strong style="font-size:9px; color:#6b7280;">DATE</strong><br>
-          ${transaction.date}
-        </div>
-      </div>
-
-      <table style="width:100%; border-collapse:collapse; margin-bottom:10px; font-size:10.5px;">
-        <thead>
-          <tr style="background:#f8fafc; border-bottom:1px solid #e5e7eb;">
-            <th style="padding:6px 6px; text-align:left; font-weight:600;">項目</th>
-            <th style="padding:6px 6px; text-align:center; width:9%;">數量</th>
-            <th style="padding:6px 6px; text-align:right; width:14%;">單價</th>
-            <th style="padding:6px 6px; text-align:right; width:14%;">小計</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${itemsHTML}
-        </tbody>
-      </table>
-
-      <div style="text-align:right; font-size:11px; margin-bottom:8px; line-height:1.6;">
-        <div>總金額：               HK$${transaction.total}</div>
-        <div>支付方式：             ${transaction.paymentMethod}</div>
-        ${transaction.pickupDate ? `<div>→ 預計取貨日期：       ${transaction.pickupDate}</div>` : ''}
-        ${transaction.discount > 0 ? `<div>折扣：                 -HK$${transaction.discount}</div>` : ''}
-      </div>
-
-      <div style="margin-top:28px; padding-top:8px; border-top:1px solid #e5e7eb; font-size:8.5px; line-height:1.35; color:#4b5563;">
-        <strong style="font-size:9px;">取貨期限 / Collection Period</strong><br>
-        Please collect your goods within three months from the order date. Uncollected items after this period will be void.<br>
-        請於本訂單日期起三個月內憑單取回假髮；逾期未取者，該物品視作作廢。<br><br>
-
-        <strong style="font-size:9px;">自然磨損及褪色 / Natural Wear and Tear</strong><br>
-        The company is not responsible for colour changes or other damage resulting from normal wear and tear or natural ageing of the hair.<br>
-        因日常使用或頭髮自然老化而引致的變色或損壞，本公司恕不負責。<br><br>
-
-        <strong style="font-size:9px;">清洗處理及天災責任 / Cleaning and Force Majeure</strong><br>
-        We will handle wigs with care during cleaning. However, the company is not liable for damage or loss caused by natural disasters or other events beyond our control.<br>
-        本公司在為客人清洗假髮時會小心處理；但若因天災或其他不可抗力之事由導致損壞或遺失，本公司概不負責。
-      </div>
-    `;
-
-    document.body.appendChild(tempDiv);
-
-    const canvas = await html2canvas(tempDiv, { scale: 3.5, backgroundColor: '#ffffff' });
-    const imgData = canvas.toDataURL('image/png');
-
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [148, 210] });
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-    pdf.addImage(imgData, 'PNG', margin, margin, pdfWidth - (margin * 2), pdfHeight);
-    pdf.save(`Invoice_${transaction.invoiceNumber}_A5.pdf`);
-    document.body.removeChild(tempDiv);
+  const openAddCustomerModal = () => {
+    setNewCustomer({ name: '', phone: '' });
+    setIsAddCustomerModalOpen(true);
   };
 
-  const generateReceiptPDF = async (transaction) => {
-    const margin = 4;
-    const pageWidth = 148;
-    const contentWidth = pageWidth - (margin * 2);
-
-    const tempDiv = document.createElement('div');
-    tempDiv.style.position = 'absolute';
-    tempDiv.style.left = '-9999px';
-    tempDiv.style.width = `${contentWidth}mm`;
-    tempDiv.style.padding = '4mm 5mm';
-    tempDiv.style.background = '#ffffff';
-    tempDiv.style.fontFamily = '"Noto Sans TC", "PingFang TC", system-ui, sans-serif';
-    tempDiv.style.fontSize = '11px';
-    tempDiv.style.lineHeight = '1.45';
-    tempDiv.style.color = '#374151';
-
-    let itemsHTML = '';
-    transaction.items.forEach(item => {
-      const displayName = item.selectedVariant 
-        ? `${item.name} - ${item.selectedVariant.name}` 
-        : item.name;
-      const itemPrice = item.selectedVariant ? item.selectedVariant.price : item.price;
-      itemsHTML += `
-        <tr style="border-bottom:1px solid #f1f5f9;">
-          <td style="padding:6px 6px;">${displayName}</td>
-          <td style="padding:6px 6px; text-align:center;">${item.qty}</td>
-          <td style="padding:6px 6px; text-align:right;">HK$${itemPrice}</td>
-          <td style="padding:6px 6px; text-align:right;">HK$${(itemPrice * item.qty).toFixed(0)}</td>
-        </tr>
-      `;
-    });
-
-    tempDiv.innerHTML = `
-      <div style="text-align:center; margin-bottom:4px">
-        <img src="/logo.png" style="height:120px; margin-bottom:2px; display:block; margin-left:auto; margin-right:auto;" />
-        <div style="font-size:20px; font-weight:700;">RECEIPT</div>
-      </div>
-
-      <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:10px;">
-        <div>
-          <strong style="font-size:9px; color:#6b7280;">BILLED TO</strong><br>
-          ${transaction.customerName || '客戶'}<br>
-          ${transaction.customerPhone || ''}
-        </div>
-        <div style="text-align:right;">
-          <strong style="font-size:9px; color:#6b7280;">RECEIPT NO</strong><br>
-          ${transaction.invoiceNumber}<br>
-          <strong style="font-size:9px; color:#6b7280;">DATE</strong><br>
-          ${transaction.date} ${transaction.time}
-        </div>
-      </div>
-
-      <table style="width:100%; border-collapse:collapse; margin-bottom:10px; font-size:10.5px;">
-        <thead>
-          <tr style="background:#f8fafc; border-bottom:1px solid #e5e7eb;">
-            <th style="padding:6px 6px; text-align:left; font-weight:600;">項目</th>
-            <th style="padding:6px 6px; text-align:center; width:9%;">數量</th>
-            <th style="padding:6px 6px; text-align:right; width:14%;">單價</th>
-            <th style="padding:6px 6px; text-align:right; width:14%;">小計</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${itemsHTML}
-        </tbody>
-      </table>
-
-      <div style="text-align:right; font-size:11px; margin-bottom:8px; line-height:1.6;">
-        <div>總金額：               HK$${transaction.total}</div>
-        <div>支付方式：             ${transaction.paymentMethod}</div>
-        ${transaction.pickupDate ? `<div>→ 預計取貨日期：       ${transaction.pickupDate}</div>` : ''}
-        ${transaction.discount > 0 ? `<div>折扣：                 -HK$${transaction.discount}</div>` : ''}
-      </div>
-
-      <div style="margin-top:28px; padding-top:8px; border-top:1px solid #e5e7eb; font-size:8.5px; line-height:1.35; color:#4b5563;">
-        <strong style="font-size:9px;">取貨期限 / Collection Period</strong><br>
-        Please collect your goods within three months from the order date. Uncollected items after this period will be void.<br>
-        請於本訂單日期起三個月內憑單取回假髮；逾期未取者，該物品視作作廢。<br><br>
-
-        <strong style="font-size:9px;">自然磨損及褪色 / Natural Wear and Tear</strong><br>
-        The company is not responsible for colour changes or other damage resulting from normal wear and tear or natural ageing of the hair.<br>
-        因日常使用或頭髮自然老化而引致的變色或損壞，本公司恕不負責。<br><br>
-
-        <strong style="font-size:9px;">清洗處理及天災責任 / Cleaning and Force Majeure</strong><br>
-        We will handle wigs with care during cleaning. However, the company is not liable for damage or loss caused by natural disasters or other events beyond our control.<br>
-        本公司在為客人清洗假髮時會小心處理；但若因天災或其他不可抗力之事由導致損壞或遺失，本公司概不負責。
-      </div>
-    `;
-
-    document.body.appendChild(tempDiv);
-
-    const canvas = await html2canvas(tempDiv, { scale: 3.5, backgroundColor: '#ffffff' });
-    const imgData = canvas.toDataURL('image/png');
-
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [148, 210] });
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-    pdf.addImage(imgData, 'PNG', margin, margin, pdfWidth - (margin * 2), pdfHeight);
-    pdf.save(`Receipt_${transaction.invoiceNumber}_A5.pdf`);
-    document.body.removeChild(tempDiv);
-  };
-
-  const printInvoice = (transaction) => {
-    if (!transaction) return;
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return alert('請允許彈出視窗使用列印功能');
-
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Invoice - ${transaction.invoiceNumber}</title>
-          <style>
-            @media print { @page { size: A5 portrait; margin: 4mm; } }
-            body { font-family: "Noto Sans TC", "PingFang TC", system-ui, sans-serif; padding: 5mm; line-height: 1.45; font-size: 11px; color: #374151; }
-            .header { text-align: center; margin-bottom: 4px; }
-            table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 10.5px; }
-            th, td { padding: 6px 6px; border-bottom: 1px solid #f1f5f9; }
-            th { background: #f8fafc; font-weight: 600; }
-            .total-section { text-align: right; font-size: 11px; margin-bottom: 8px; line-height: 1.6; }
-            .terms { margin-top: 28px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 8.5px; line-height: 1.35; color: #4b5563; }
-            .thankyou { text-align: right; font-size: 11px; color: #6b7280; margin-top: 8px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <img src="/logo.png" style="height:135px; margin-bottom:2px;" />
-            <div style="font-size:21px; font-weight:700;">INVOICE</div>
-          </div>
-
-          <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:10px;">
-            <div>
-              <strong style="font-size:9px; color:#6b7280;">BILLED TO</strong><br>
-              ${transaction.customerName || '客戶'}<br>
-              ${transaction.customerPhone || ''}
-            </div>
-            <div style="text-align:right;">
-              <strong style="font-size:9px; color:#6b7280;">INVOICE NO</strong><br>
-              ${transaction.invoiceNumber}<br>
-              <strong style="font-size:9px; color:#6b7280;">DATE</strong><br>
-              ${transaction.date}
-            </div>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th style="text-align:left;">項目</th>
-                <th style="text-align:center;">數量</th>
-                <th style="text-align:right;">單價</th>
-                <th style="text-align:right;">小計</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${transaction.items.map(item => {
-                const displayName = item.selectedVariant 
-                  ? `${item.name} - ${item.selectedVariant.name}` 
-                  : item.name;
-                const itemPrice = item.selectedVariant ? item.selectedVariant.price : item.price;
-                return `
-                  <tr>
-                    <td>${displayName}</td>
-                    <td style="text-align:center;">${item.qty}</td>
-                    <td style="text-align:right;">HK$${itemPrice}</td>
-                    <td style="text-align:right;">HK$${(itemPrice * item.qty).toFixed(0)}</td>
-                  </tr>
-                `;
-              }).join('')}
-            </tbody>
-          </table>
-
-          <div class="total-section">
-            <div>總金額：               HK$${transaction.total}</div>
-            <div>支付方式：             ${transaction.paymentMethod}</div>
-            ${transaction.pickupDate ? `<div>→ 預計取貨日期：       ${transaction.pickupDate}</div>` : ''}
-            ${transaction.discount > 0 ? `<div>折扣：                 -HK$${transaction.discount}</div>` : ''}
-          </div>
-
-          <div class="terms">
-            <strong style="font-size:9px;">取貨期限 / Collection Period</strong><br>
-            Please collect your goods within three months from the order date. Uncollected items after this period will be void.<br>
-            請於本訂單日期起三個月內憑單取回假髮；逾期未取者，該物品視作作廢。<br><br>
-
-            <strong style="font-size:9px;">自然磨損及褪色 / Natural Wear and Tear</strong><br>
-            The company is not responsible for colour changes or other damage resulting from normal wear and tear or natural ageing of the hair.<br>
-            因日常使用或頭髮自然老化而引致的變色或損壞，本公司恕不負責。<br><br>
-
-            <strong style="font-size:9px;">清洗處理及天災責任 / Cleaning and Force Majeure</strong><br>
-            We will handle wigs with care during cleaning. However, the company is not liable for damage or loss caused by natural disasters or other events beyond our control.<br>
-            本公司在為客人清洗假髮時會小心處理；但若因天災或其他不可抗力之事由導致損壞或遺失，本公司概不負責。
-          </div>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    setTimeout(() => printWindow.print(), 300);
-  };
-
-  const printReceipt = (transaction) => {
-    if (!transaction) return;
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return alert('請允許彈出視窗使用列印功能');
-
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Receipt - ${transaction.invoiceNumber}</title>
-          <style>
-            @media print { @page { size: A5 portrait; margin: 4mm; } }
-            body { font-family: "Noto Sans TC", "PingFang TC", system-ui, sans-serif; padding: 5mm; line-height: 1.45; font-size: 11px; color: #374151; }
-            .header { text-align: center; margin-bottom: 4px; }
-            table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 10.5px; }
-            th, td { padding: 6px 6px; border-bottom: 1px solid #f1f5f9; }
-            th { background: #f8fafc; font-weight: 600; }
-            .total-section { text-align: right; font-size: 11px; margin-bottom: 8px; line-height: 1.6; }
-            .terms { margin-top: 28px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 8.5px; line-height: 1.35; color: #4b5563; }
-            .thankyou { text-align: right; font-size: 11px; color: #6b7280; margin-top: 8px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <img src="/logo.png" style="height:120px; margin-bottom:2px;" />
-            <div style="font-size:20px; font-weight:700;">RECEIPT</div>
-          </div>
-
-          <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:10px;">
-            <div>
-              <strong style="font-size:9px; color:#6b7280;">BILLED TO</strong><br>
-              ${transaction.customerName || '客戶'}<br>
-              ${transaction.customerPhone || ''}
-            </div>
-            <div style="text-align:right;">
-              <strong style="font-size:9px; color:#6b7280;">RECEIPT NO</strong><br>
-              ${transaction.invoiceNumber}<br>
-              <strong style="font-size:9px; color:#6b7280;">DATE</strong><br>
-              ${transaction.date} ${transaction.time}
-            </div>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th style="text-align:left;">項目</th>
-                <th style="text-align:center;">數量</th>
-                <th style="text-align:right;">單價</th>
-                <th style="text-align:right;">小計</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${transaction.items.map(item => {
-                const displayName = item.selectedVariant 
-                  ? `${item.name} - ${item.selectedVariant.name}` 
-                  : item.name;
-                const itemPrice = item.selectedVariant ? item.selectedVariant.price : item.price;
-                return `
-                  <tr>
-                    <td>${displayName}</td>
-                    <td style="text-align:center;">${item.qty}</td>
-                    <td style="text-align:right;">HK$${itemPrice}</td>
-                    <td style="text-align:right;">HK$${(itemPrice * item.qty).toFixed(0)}</td>
-                  </tr>
-                `;
-              }).join('')}
-            </tbody>
-          </table>
-
-          <div class="total-section">
-            <div>總金額：               HK$${transaction.total}</div>
-            <div>支付方式：             ${transaction.paymentMethod}</div>
-            ${transaction.pickupDate ? `<div>→ 預計取貨日期：       ${transaction.pickupDate}</div>` : ''}
-            ${transaction.discount > 0 ? `<div>折扣：                 -HK$${transaction.discount}</div>` : ''}
-          </div>
-
-          <div class="terms">
-            <strong style="font-size:9px;">取貨期限 / Collection Period</strong><br>
-            Please collect your goods within three months from the order date. Uncollected items after this period will be void.<br>
-            請於本訂單日期起三個月內憑單取回假髮；逾期未取者，該物品視作作廢。<br><br>
-
-            <strong style="font-size:9px;">自然磨損及褪色 / Natural Wear and Tear</strong><br>
-            The company is not responsible for colour changes or other damage resulting from normal wear and tear or natural ageing of the hair.<br>
-            因日常使用或頭髮自然老化而引致的變色或損壞，本公司恕不負責。<br><br>
-
-            <strong style="font-size:9px;">清洗處理及天災責任 / Cleaning and Force Majeure</strong><br>
-            We will handle wigs with care during cleaning. However, the company is not liable for damage or loss caused by natural disasters or other events beyond our control.<br>
-            本公司在為客人清洗假髮時會小心處理；但若因天災或其他不可抗力之事由導致損壞或遺失，本公司概不負責。
-          </div>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    setTimeout(() => printWindow.print(), 300);
-  };
-
-  const sendToWhatsApp = (transaction) => {
-    if (!transaction) return;
-    const phone = transaction.customerPhone ? transaction.customerPhone.replace(/\s/g, '') : '';
-    const hasPickup = transaction.pickupDate;
-
-    const message = `麗明珠真髮中心 訂單確認\n\n訂單編號：${transaction.invoiceNumber}\n客戶：${transaction.customerName || '尊貴客戶'}\n總金額：HK$${transaction.total}\n支付方式：${transaction.paymentMethod}\n${hasPickup ? `預計取貨日期：${transaction.pickupDate}\n` : ''}請查看附件發票。\n\n${companyInfo.name}\nTel: ${companyInfo.phone} ｜ WhatsApp: ${companyInfo.whatsapp}`;
-
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = phone ? `https://wa.me/${phone}?text=${encodedMessage}` : `https://wa.me/?text=${encodedMessage}`;
-    window.open(whatsappUrl, '_blank');
-  };
-  // ==================== 預約相關函數（補充） ====================
-  const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
-  const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
-
-  const generateCalendarDays = () => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-    const daysInMonth = getDaysInMonth(year, month);
-    const firstDay = getFirstDayOfMonth(year, month);
-    const days = [];
-
-    for (let i = 0; i < firstDay; i++) {
-      days.push({ day: null, isCurrentMonth: false });
+  const handleAddCustomer = () => {
+    if (!newCustomer.name) {
+      showToast('請輸入客戶姓名', 'error');
+      return;
     }
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      days.push({
-        day,
-        isCurrentMonth: true,
-        dateStr,
-        hasAppointment: appointments.some(a => a.date === dateStr)
-      });
+    const exists = customers.some(c => c.name === newCustomer.name && c.phone === newCustomer.phone);
+    if (exists) {
+      showToast('此客戶已存在', 'error');
+      return;
     }
-    return days;
+    const newCust = { 
+      id: Date.now(), 
+      name: newCustomer.name.trim(), 
+      phone: newCustomer.phone.trim() 
+    };
+    setCustomers(prev => [...prev, newCust]);
+    setIsAddCustomerModalOpen(false);
+    showToast('客戶新增成功！', 'success');
   };
 
-  const changeMonth = (delta) => {
-    const newMonth = new Date(currentMonth);
-    newMonth.setMonth(newMonth.getMonth() + delta);
-    setCurrentMonth(newMonth);
-  };
-
-  const selectCalendarDate = (dateStr) => {
-    setSelectedDate(dateStr);
-  };
-  // ==================== 客戶匯出/匯入完整函數 ====================
   const exportCustomersTransactionsCSV = () => {
     if (transactions.length === 0) {
       showToast('目前沒有消費記錄可匯出', 'error');
@@ -1024,6 +643,7 @@ function App() {
               channel: row['來源渠道'] || null,
               company: companyInfo
             };
+
             const existingIndex = newTransactions.findIndex(tx => tx.invoiceNumber === invoiceNumber);
             if (existingIndex !== -1) {
               newTransactions[existingIndex] = newTx;
@@ -1048,31 +668,7 @@ function App() {
     };
     input.click();
   };
-    // ==================== 客戶相關函數（補充） ====================
-  const openAddCustomerModal = () => {
-    setNewCustomer({ name: '', phone: '' });
-    setIsAddCustomerModalOpen(true);
-  };
 
-  const handleAddCustomer = () => {
-    if (!newCustomer.name) {
-      showToast('請輸入客戶姓名', 'error');
-      return;
-    }
-    const exists = customers.some(c => c.name === newCustomer.name && c.phone === newCustomer.phone);
-    if (exists) {
-      showToast('此客戶已存在', 'error');
-      return;
-    }
-    const newCust = { 
-      id: Date.now(), 
-      name: newCustomer.name.trim(), 
-      phone: newCustomer.phone.trim() 
-    };
-    setCustomers(prev => [...prev, newCust]);
-    setIsAddCustomerModalOpen(false);
-    showToast('客戶新增成功！', 'success');
-  };女
   const exportToExcel = () => {
     let filteredTransactions = [...transactions];
     if (startDate) filteredTransactions = filteredTransactions.filter(tx => tx.date >= startDate);
@@ -1135,6 +731,423 @@ function App() {
     setItems(updatedItems);
     setTransactions(prev => prev.filter(tx => tx.id !== id));
     showToast('訂單已刪除，庫存已歸還', 'success');
+  };
+    const generateInvoicePDF = async (transaction) => {
+    const margin = 4;
+    const pageWidth = 148;
+    const contentWidth = pageWidth - (margin * 2);
+
+    const tempDiv = document.createElement('div');
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.left = '-9999px';
+    tempDiv.style.width = `${contentWidth}mm`;
+    tempDiv.style.padding = '4mm 5mm';
+    tempDiv.style.background = '#ffffff';
+    tempDiv.style.fontFamily = '"Noto Sans TC", "PingFang TC", system-ui, sans-serif';
+    tempDiv.style.fontSize = '11px';
+    tempDiv.style.lineHeight = '1.45';
+    tempDiv.style.color = '#374151';
+
+    let itemsHTML = '';
+    transaction.items.forEach(item => {
+      const displayName = item.selectedVariant 
+        ? `${item.name} - ${item.selectedVariant.name}` 
+        : item.name;
+      const itemPrice = item.selectedVariant ? item.selectedVariant.price : item.price;
+      itemsHTML += `
+        <tr style="border-bottom:1px solid #f1f5f9;">
+          <td style="padding:6px 6px;">${displayName}</td>
+          <td style="padding:6px 6px; text-align:center;">${item.qty}</td>
+          <td style="padding:6px 6px; text-align:right;">HK$${itemPrice}</td>
+          <td style="padding:6px 6px; text-align:right;">HK$${(itemPrice * item.qty).toFixed(0)}</td>
+        </tr>
+      `;
+    });
+
+    tempDiv.innerHTML = `
+      <div style="text-align:center; margin-bottom:4px">
+        <img src="/logo.png" style="height:135px; margin-bottom:2px; display:block; margin-left:auto; margin-right:auto;" />
+        <div style="font-size:21px; font-weight:700;">INVOICE</div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:10px;">
+        <div>
+          <strong style="font-size:9px; color:#6b7280;">BILLED TO</strong><br>
+          ${transaction.customerName || '客戶'}<br>
+          ${transaction.customerPhone || ''}
+        </div>
+        <div style="text-align:right;">
+          <strong style="font-size:9px; color:#6b7280;">INVOICE NO</strong><br>
+          ${transaction.invoiceNumber}<br>
+          <strong style="font-size:9px; color:#6b7280;">DATE</strong><br>
+          ${transaction.date}
+        </div>
+      </div>
+
+      <table style="width:100%; border-collapse:collapse; margin-bottom:10px; font-size:10.5px;">
+        <thead>
+          <tr style="background:#f8fafc; border-bottom:1px solid #e5e7eb;">
+            <th style="padding:6px 6px; text-align:left; font-weight:600;">項目</th>
+            <th style="padding:6px 6px; text-align:center; width:9%;">數量</th>
+            <th style="padding:6px 6px; text-align:right; width:14%;">單價</th>
+            <th style="padding:6px 6px; text-align:right; width:14%;">小計</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsHTML}
+        </tbody>
+      </table>
+
+      <div style="text-align:right; font-size:11px; margin-bottom:8px; line-height:1.6;">
+        <div>總金額：               HK$${transaction.total}</div>
+        <div>支付方式：             ${transaction.paymentMethod}</div>
+        ${transaction.pickupDate ? `<div>→ 預計取貨日期：       ${transaction.pickupDate}</div>` : ''}
+        ${transaction.discount > 0 ? `<div>折扣：                 -HK$${transaction.discount}</div>` : ''}
+      </div>
+
+      <div style="margin-top:28px; padding-top:8px; border-top:1px solid #e5e7eb; font-size:8.5px; line-height:1.35; color:#4b5563;">
+        <strong style="font-size:9px;">取貨期限 / Collection Period</strong><br>
+        Please collect your goods within three months from the order date. Uncollected items after this period will be void.<br>
+        請於本訂單日期起三個月內憑單取回假髮；逾期未取者，該物品視作作廢。<br><br>
+
+        <strong style="font-size:9px;">自然磨損及褪色 / Natural Wear and Tear</strong><br>
+        The company is not responsible for colour changes or other damage resulting from normal wear and tear or natural ageing of the hair.<br>
+        因日常使用或頭髮自然老化而引致的變色或損壞，本公司恕不負責。<br><br>
+
+        <strong style="font-size:9px;">清洗處理及天災責任 / Cleaning and Force Majeure</strong><br>
+        We will handle wigs with care during cleaning. However, the company is not liable for damage or loss caused by natural disasters or other events beyond our control.<br>
+        本公司在為客人清洗假髮時會小心處理；但若因天災或其他不可抗力之事由導致損壞或遺失，本公司概不負責。
+      </div>
+
+      <div style="text-align:right; font-size:11px; color:#6b7280; margin-top:8px;">
+        Thank you for your business!
+      </div>
+    `;
+
+    document.body.appendChild(tempDiv);
+
+    const canvas = await html2canvas(tempDiv, { scale: 3.5, backgroundColor: '#ffffff' });
+    const imgData = canvas.toDataURL('image/png');
+
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [148, 210] });
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    pdf.addImage(imgData, 'PNG', margin, margin, pdfWidth - (margin * 2), pdfHeight);
+    pdf.save(`Invoice_${transaction.invoiceNumber}_A5.pdf`);
+    document.body.removeChild(tempDiv);
+  };
+
+  const generateReceiptPDF = async (transaction) => {
+    const margin = 4;
+    const pageWidth = 148;
+    const contentWidth = pageWidth - (margin * 2);
+
+    const tempDiv = document.createElement('div');
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.left = '-9999px';
+    tempDiv.style.width = `${contentWidth}mm`;
+    tempDiv.style.padding = '4mm 5mm';
+    tempDiv.style.background = '#ffffff';
+    tempDiv.style.fontFamily = '"Noto Sans TC", "PingFang TC", system-ui, sans-serif';
+    tempDiv.style.fontSize = '11px';
+    tempDiv.style.lineHeight = '1.45';
+    tempDiv.style.color = '#374151';
+
+    let itemsHTML = '';
+    transaction.items.forEach(item => {
+      const displayName = item.selectedVariant 
+        ? `${item.name} - ${item.selectedVariant.name}` 
+        : item.name;
+      const itemPrice = item.selectedVariant ? item.selectedVariant.price : item.price;
+      itemsHTML += `
+        <tr style="border-bottom:1px solid #f1f5f9;">
+          <td style="padding:6px 6px;">${displayName}</td>
+          <td style="padding:6px 6px; text-align:center;">${item.qty}</td>
+          <td style="padding:6px 6px; text-align:right;">HK$${itemPrice}</td>
+          <td style="padding:6px 6px; text-align:right;">HK$${(itemPrice * item.qty).toFixed(0)}</td>
+        </tr>
+      `;
+    });
+
+    tempDiv.innerHTML = `
+      <div style="text-align:center; margin-bottom:4px">
+        <img src="/logo.png" style="height:120px; margin-bottom:2px; display:block; margin-left:auto; margin-right:auto;" />
+        <div style="font-size:20px; font-weight:700;">RECEIPT</div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:10px;">
+        <div>
+          <strong style="font-size:9px; color:#6b7280;">BILLED TO</strong><br>
+          ${transaction.customerName || '客戶'}<br>
+          ${transaction.customerPhone || ''}
+        </div>
+        <div style="text-align:right;">
+          <strong style="font-size:9px; color:#6b7280;">RECEIPT NO</strong><br>
+          ${transaction.invoiceNumber}<br>
+          <strong style="font-size:9px; color:#6b7280;">DATE</strong><br>
+          ${transaction.date} ${transaction.time}
+        </div>
+      </div>
+
+      <table style="width:100%; border-collapse:collapse; margin-bottom:10px; font-size:10.5px;">
+        <thead>
+          <tr style="background:#f8fafc; border-bottom:1px solid #e5e7eb;">
+            <th style="padding:6px 6px; text-align:left; font-weight:600;">項目</th>
+            <th style="padding:6px 6px; text-align:center; width:9%;">數量</th>
+            <th style="padding:6px 6px; text-align:right; width:14%;">單價</th>
+            <th style="padding:6px 6px; text-align:right; width:14%;">小計</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsHTML}
+        </tbody>
+      </table>
+
+      <div style="text-align:right; font-size:11px; margin-bottom:8px; line-height:1.6;">
+        <div>總金額：               HK$${transaction.total}</div>
+        <div>支付方式：             ${transaction.paymentMethod}</div>
+        ${transaction.pickupDate ? `<div>→ 預計取貨日期：       ${transaction.pickupDate}</div>` : ''}
+        ${transaction.discount > 0 ? `<div>折扣：                 -HK$${transaction.discount}</div>` : ''}
+      </div>
+
+      <div style="margin-top:28px; padding-top:8px; border-top:1px solid #e5e7eb; font-size:8.5px; line-height:1.35; color:#4b5563;">
+        <strong style="font-size:9px;">取貨期限 / Collection Period</strong><br>
+        Please collect your goods within three months from the order date. Uncollected items after this period will be void.<br>
+        請於本訂單日期起三個月內憑單取回假髮；逾期未取者，該物品視作作廢。<br><br>
+
+        <strong style="font-size:9px;">自然磨損及褪色 / Natural Wear and Tear</strong><br>
+        The company is not responsible for colour changes or other damage resulting from normal wear and tear or natural ageing of the hair.<br>
+        因日常使用或頭髮自然老化而引致的變色或損壞，本公司恕不負責。<br><br>
+
+        <strong style="font-size:9px;">清洗處理及天災責任 / Cleaning and Force Majeure</strong><br>
+        We will handle wigs with care during cleaning. However, the company is not liable for damage or loss caused by natural disasters or other events beyond our control.<br>
+        本公司在為客人清洗假髮時會小心處理；但若因天災或其他不可抗力之事由導致損壞或遺失，本公司概不負責。
+      </div>
+
+      <div style="text-align:right; font-size:11px; color:#6b7280; margin-top:8px;">
+        Thank you for your business!
+      </div>
+    `;
+
+    document.body.appendChild(tempDiv);
+
+    const canvas = await html2canvas(tempDiv, { scale: 3.5, backgroundColor: '#ffffff' });
+    const imgData = canvas.toDataURL('image/png');
+
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [148, 210] });
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    pdf.addImage(imgData, 'PNG', margin, margin, pdfWidth - (margin * 2), pdfHeight);
+    pdf.save(`Receipt_${transaction.invoiceNumber}_A5.pdf`);
+    document.body.removeChild(tempDiv);
+  };
+
+  const printInvoice = (transaction) => {
+    if (!transaction) return;
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return alert('請允許彈出視窗使用列印功能');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Invoice - ${transaction.invoiceNumber}</title>
+          <style>
+            @media print { @page { size: A5 portrait; margin: 4mm; } }
+            body { font-family: "Noto Sans TC", "PingFang TC", system-ui, sans-serif; padding: 5mm; line-height: 1.45; font-size: 11px; color: #374151; }
+            .header { text-align: center; margin-bottom: 4px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 10.5px; }
+            th, td { padding: 6px 6px; border-bottom: 1px solid #f1f5f9; }
+            th { background: #f8fafc; font-weight: 600; }
+            .total-section { text-align: right; font-size: 11px; margin-bottom: 8px; line-height: 1.6; }
+            .terms { margin-top: 28px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 8.5px; line-height: 1.35; color: #4b5563; }
+            .thankyou { text-align: right; font-size: 11px; color: #6b7280; margin-top: 8px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <img src="/logo.png" style="height:135px; margin-bottom:2px;" />
+            <div style="font-size:21px; font-weight:700;">INVOICE</div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:10px;">
+            <div>
+              <strong style="font-size:9px; color:#6b7280;">BILLED TO</strong><br>
+              ${transaction.customerName || '客戶'}<br>
+              ${transaction.customerPhone || ''}
+            </div>
+            <div style="text-align:right;">
+              <strong style="font-size:9px; color:#6b7280;">INVOICE NO</strong><br>
+              ${transaction.invoiceNumber}<br>
+              <strong style="font-size:9px; color:#6b7280;">DATE</strong><br>
+              ${transaction.date}
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th style="text-align:left;">項目</th>
+                <th style="text-align:center;">數量</th>
+                <th style="text-align:right;">單價</th>
+                <th style="text-align:right;">小計</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${transaction.items.map(item => {
+                const displayName = item.selectedVariant 
+                  ? `${item.name} - ${item.selectedVariant.name}` 
+                  : item.name;
+                const itemPrice = item.selectedVariant ? item.selectedVariant.price : item.price;
+                return `
+                  <tr>
+                    <td>${displayName}</td>
+                    <td style="text-align:center;">${item.qty}</td>
+                    <td style="text-align:right;">HK$${itemPrice}</td>
+                    <td style="text-align:right;">HK$${(itemPrice * item.qty).toFixed(0)}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+
+          <div class="total-section">
+            <div>總金額：               HK$${transaction.total}</div>
+            <div>支付方式：             ${transaction.paymentMethod}</div>
+            ${transaction.pickupDate ? `<div>→ 預計取貨日期：       ${transaction.pickupDate}</div>` : ''}
+            ${transaction.discount > 0 ? `<div>折扣：                 -HK$${transaction.discount}</div>` : ''}
+          </div>
+
+          <div class="terms">
+            <strong style="font-size:9px;">取貨期限 / Collection Period</strong><br>
+            Please collect your goods within three months from the order date. Uncollected items after this period will be void.<br>
+            請於本訂單日期起三個月內憑單取回假髮；逾期未取者，該物品視作作廢。<br><br>
+
+            <strong style="font-size:9px;">自然磨損及褪色 / Natural Wear and Tear</strong><br>
+            The company is not responsible for colour changes or other damage resulting from normal wear and tear or natural ageing of the hair.<br>
+            因日常使用或頭髮自然老化而引致的變色或損壞，本公司恕不負責。<br><br>
+
+            <strong style="font-size:9px;">清洗處理及天災責任 / Cleaning and Force Majeure</strong><br>
+            We will handle wigs with care during cleaning. However, the company is not liable for damage or loss caused by natural disasters or other events beyond our control.<br>
+            本公司在為客人清洗假髮時會小心處理；但若因天災或其他不可抗力之事由導致損壞或遺失，本公司概不負責。
+          </div>
+
+          <div class="thankyou">Thank you for your business!</div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 300);
+  };
+
+  const printReceipt = (transaction) => {
+    if (!transaction) return;
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return alert('請允許彈出視窗使用列印功能');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Receipt - ${transaction.invoiceNumber}</title>
+          <style>
+            @media print { @page { size: A5 portrait; margin: 4mm; } }
+            body { font-family: "Noto Sans TC", "PingFang TC", system-ui, sans-serif; padding: 5mm; line-height: 1.45; font-size: 11px; color: #374151; }
+            .header { text-align: center; margin-bottom: 4px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 10.5px; }
+            th, td { padding: 6px 6px; border-bottom: 1px solid #f1f5f9; }
+            th { background: #f8fafc; font-weight: 600; }
+            .total-section { text-align: right; font-size: 11px; margin-bottom: 8px; line-height: 1.6; }
+            .terms { margin-top: 28px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 8.5px; line-height: 1.35; color: #4b5563; }
+            .thankyou { text-align: right; font-size: 11px; color: #6b7280; margin-top: 8px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <img src="/logo.png" style="height:120px; margin-bottom:2px;" />
+            <div style="font-size:20px; font-weight:700;">RECEIPT</div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:10px;">
+            <div>
+              <strong style="font-size:9px; color:#6b7280;">BILLED TO</strong><br>
+              ${transaction.customerName || '客戶'}<br>
+              ${transaction.customerPhone || ''}
+            </div>
+            <div style="text-align:right;">
+              <strong style="font-size:9px; color:#6b7280;">RECEIPT NO</strong><br>
+              ${transaction.invoiceNumber}<br>
+              <strong style="font-size:9px; color:#6b7280;">DATE</strong><br>
+              ${transaction.date} ${transaction.time}
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th style="text-align:left;">項目</th>
+                <th style="text-align:center;">數量</th>
+                <th style="text-align:right;">單價</th>
+                <th style="text-align:right;">小計</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${transaction.items.map(item => {
+                const displayName = item.selectedVariant 
+                  ? `${item.name} - ${item.selectedVariant.name}` 
+                  : item.name;
+                const itemPrice = item.selectedVariant ? item.selectedVariant.price : item.price;
+                return `
+                  <tr>
+                    <td>${displayName}</td>
+                    <td style="text-align:center;">${item.qty}</td>
+                    <td style="text-align:right;">HK$${itemPrice}</td>
+                    <td style="text-align:right;">HK$${(itemPrice * item.qty).toFixed(0)}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+
+          <div class="total-section">
+            <div>總金額：               HK$${transaction.total}</div>
+            <div>支付方式：             ${transaction.paymentMethod}</div>
+            ${transaction.pickupDate ? `<div>→ 預計取貨日期：       ${transaction.pickupDate}</div>` : ''}
+            ${transaction.discount > 0 ? `<div>折扣：                 -HK$${transaction.discount}</div>` : ''}
+          </div>
+
+          <div class="terms">
+            <strong style="font-size:9px;">取貨期限 / Collection Period</strong><br>
+            Please collect your goods within three months from the order date. Uncollected items after this period will be void.<br>
+            請於本訂單日期起三個月內憑單取回假髮；逾期未取者，該物品視作作廢。<br><br>
+
+            <strong style="font-size:9px;">自然磨損及褪色 / Natural Wear and Tear</strong><br>
+            The company is not responsible for colour changes or other damage resulting from normal wear and tear or natural ageing of the hair.<br>
+            因日常使用或頭髮自然老化而引致的變色或損壞，本公司恕不負責。<br><br>
+
+            <strong style="font-size:9px;">清洗處理及天災責任 / Cleaning and Force Majeure</strong><br>
+            We will handle wigs with care during cleaning. However, the company is not liable for damage or loss caused by natural disasters or other events beyond our control.<br>
+            本公司在為客人清洗假髮時會小心處理；但若因天災或其他不可抗力之事由導致損壞或遺失，本公司概不負責。
+          </div>
+
+          <div class="thankyou">Thank you for your business!</div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 300);
+  };
+
+  const sendToWhatsApp = (transaction) => {
+    if (!transaction) return;
+    const phone = transaction.customerPhone ? transaction.customerPhone.replace(/\s/g, '') : '';
+    const hasPickup = transaction.pickupDate;
+
+    const message = `麗明珠真髮中心 訂單確認\n\n訂單編號：${transaction.invoiceNumber}\n客戶：${transaction.customerName || '尊貴客戶'}\n總金額：HK$${transaction.total}\n支付方式：${transaction.paymentMethod}\n${hasPickup ? `預計取貨日期：${transaction.pickupDate}\n` : ''}請查看附件發票。\n\n${companyInfo.name}\nTel: ${companyInfo.phone} ｜ WhatsApp: ${companyInfo.whatsapp}`;
+
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = phone ? `https://wa.me/${phone}?text=${encodedMessage}` : `https://wa.me/?text=${encodedMessage}`;
+    window.open(whatsappUrl, '_blank');
   };
     return (
     <div className="min-h-screen bg-slate-50">

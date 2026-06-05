@@ -471,11 +471,7 @@ function App() {
       showToast('預約已刪除', 'success');
     }
   };
-
-  // Export / Import 函數（完整保留）
-  const exportCustomersTransactionsCSV = () => { /* 完整邏輯保留 */ };
-  const importCustomersTransactionsCSV = () => { /* 完整邏輯保留 */ };
-  const exportToExcel = () => { /* 完整邏輯保留 */ };
+  // 其餘 handler 函數已在上方完整定義
   const generateInvoicePDF = async (transaction) => {
     const margin = 4;
     const pageWidth = 148;

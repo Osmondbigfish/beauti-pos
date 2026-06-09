@@ -121,13 +121,16 @@ function App() {
   const [checkoutChannel, setCheckoutChannel] = useState('');
 
   // ==================== Firestore 即時同步 ====================
+  // ==================== Firestore 即時同步 ====================
   useEffect(() => {
     const unsubscribeItems = onSnapshot(itemsCollection, (snapshot) => {
-if (!snapshot.empty) {
-  const itemsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  setItems(itemsData);
-} 
-// 移除 else 的 fallback
+      if (!snapshot.empty) {
+        const itemsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setItems(itemsData);
+      } 
+      // 移除 else 的 fallback
+    });
+
     const unsubscribeTransactions = onSnapshot(
       query(transactionsCollection, orderBy("id", "desc")), 
       (snapshot) => {

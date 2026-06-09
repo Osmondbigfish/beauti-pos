@@ -600,23 +600,6 @@ function App() {
       showToast('請輸入客戶姓名', 'error');
       return;
     }
-  const syncItemsToFirestore = async () => {
-    if (!window.confirm('確定要把目前電腦顯示的所有商品同步到雲端嗎？\n這會覆蓋 Firebase 上的商品資料。')) {
-      return;
-    }
-
-    try {
-      let count = 0;
-      for (const item of items) {
-        await setDoc(doc(itemsCollection, item.id.toString()), item);
-        count++;
-      }
-      showToast(`已成功同步 ${count} 個商品到雲端！`, 'success');
-    } catch (error) {
-      console.error("同步商品失敗:", error);
-      showToast('同步失敗，請稍後再試', 'error');
-    }
-  };
 
     const exists = customers.some(c => c.name === newCustomer.name && c.phone === newCustomer.phone);
     if (exists) {
@@ -838,6 +821,25 @@ function App() {
     setItems(updatedItems);
     setTransactions(prev => prev.filter(tx => tx.id !== id));
     showToast('訂單已刪除，庫存已歸還', 'success');
+  };
+
+  // ==================== 新增：同步商品到 Firebase ====================
+  const syncItemsToFirestore = async () => {
+    if (!window.confirm('確定要把目前電腦顯示的所有商品同步到雲端嗎？\n這會覆蓋 Firebase 上的商品資料。')) {
+      return;
+    }
+
+    try {
+      let count = 0;
+      for (const item of items) {
+        await setDoc(doc(itemsCollection, item.id.toString()), item);
+        count++;
+      }
+      showToast(`已成功同步 ${count} 個商品到雲端！`, 'success');
+    } catch (error) {
+      console.error("同步商品失敗:", error);
+      showToast('同步失敗，請稍後再試', 'error');
+    }
   };
 
   const generateInvoicePDF = async (transaction) => {
@@ -1405,22 +1407,23 @@ function App() {
           </div>
         )}
                 {/* ==================== 庫存頁面 ==================== */}
-{activeTab === 'inventory' && (
-  <div>
-    <div className="flex items-center justify-between mb-6">
-      <h2 className="text-2xl font-semibold tracking-tight">庫存管理</h2>
-      <div className="flex gap-3">
-        <button 
-          onClick={syncItemsToFirestore} 
-          className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-medium"
-        >
-          <Upload className="w-4 h-4" /> 同步所有商品到雲端
-        </button>
-        <button onClick={openAddItemModal} className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 text-white rounded-xl hover:bg-rose-700 font-medium">
-          <Plus className="w-4 h-4" /> 添加商品 / 服務
-        </button>
-      </div>
-    </div>
+        {activeTab === 'inventory' && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-semibold tracking-tight">庫存管理</h2>
+              <div className="flex gap-3">
+                <button 
+                  onClick={syncItemsToFirestore} 
+                  className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-medium"
+                >
+                  <Upload className="w-4 h-4" /> 同步所有商品到雲端
+                </button>
+                <button onClick={openAddItemModal} className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 text-white rounded-xl hover:bg-rose-700 font-medium">
+                  <Plus className="w-4 h-4" /> 添加商品 / 服務
+                </button>
+              </div>
+            </div>
+
             <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
               <table className="pos-table w-full">
                 <thead>
@@ -1434,27 +1437,33 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map(item => (
-                    <tr key={item.id}>
-                      <td className="font-medium">{item.name}</td>
-                      <td>
-                        <span className={`inline-block px-3 py-0.5 text-xs rounded-full ${item.type === 'product' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                          {item.type === 'product' ? '商品' : '服務'}
-                        </span>
-                      </td>
-                      <td className="text-slate-500">{item.category}</td>
-                      <td className="text-right font-mono">HK${item.price}</td>
-                      <td className="text-right">
-                        {item.type === 'product' ? <span className="font-mono">{item.stock}</span> : <span className="text-emerald-600 font-medium">{item.duration}</span>}
-                      </td>
-                      <td className="text-center">
-                        <div className="flex justify-center gap-2">
-                          <button onClick={() => openEditItemModal(item)} className="text-xs px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200">編輯</button>
-                          <button onClick={() => deleteItem(item.id)} className="text-xs px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200">刪除</button>
-                        </div>
-                      </td>
+                  {items && items.length > 0 ? (
+                    items.map(item => (
+                      <tr key={item.id}>
+                        <td className="font-medium">{item.name}</td>
+                        <td>
+                          <span className={`inline-block px-3 py-0.5 text-xs rounded-full ${item.type === 'product' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                            {item.type === 'product' ? '商品' : '服務'}
+                          </span>
+                        </td>
+                        <td className="text-slate-500">{item.category}</td>
+                        <td className="text-right font-mono">HK${item.price}</td>
+                        <td className="text-right">
+                          {item.type === 'product' ? <span className="font-mono">{item.stock}</span> : <span className="text-emerald-600 font-medium">{item.duration}</span>}
+                        </td>
+                        <td className="text-center">
+                          <div className="flex justify-center gap-2">
+                            <button onClick={() => openEditItemModal(item)} className="text-xs px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200">編輯</button>
+                            <button onClick={() => deleteItem(item.id)} className="text-xs px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200">刪除</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="6" className="text-center py-8 text-slate-400">目前沒有商品資料</td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1690,9 +1699,7 @@ function App() {
             </div>
           </div>
         )}
-      </div>
-
-      {/* ==================== 所有 Modal ==================== */}
+              {/* ==================== 所有 Modal ==================== */}
 
       {/* Payment Modal */}
       {isPaymentModalOpen && (

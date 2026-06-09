@@ -127,6 +127,7 @@ if (!snapshot.empty) {
   const itemsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   setItems(itemsData);
 } 
+// 移除 else 的 fallback
     const unsubscribeTransactions = onSnapshot(
       query(transactionsCollection, orderBy("id", "desc")), 
       (snapshot) => {

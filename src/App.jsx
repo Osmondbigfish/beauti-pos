@@ -833,23 +833,34 @@ const deleteItem = async (id) => {
     showToast('訂單已刪除，庫存已歸還', 'success');
   };
 
-  const syncItemsToFirestore = async () => {
-    if (!window.confirm('確定要把目前電腦顯示的所有商品同步到雲端嗎？\n這會覆蓋 Firebase 上的商品資料。')) {
-      return;
-    }
+ const syncItemsToFirestore = async () => {
+  if (!window.confirm('確定要把目前電腦顯示的所有商品同步到雲端嗎？\n這會覆蓋 Firebase 上的商品資料。')) {
+    return;
+  }
 
-    try {
-      let count = 0;
-      for (const item of items) {
-        await setDoc(doc(itemsCollection, item.id.toString()), item);
-        count++;
-      }
-      showToast(`已成功同步 ${count} 個商品到雲端！`, 'success');
-    } catch (error) {
-      console.error("同步商品失敗:", error);
-      showToast('同步失敗，請稍後再試', 'error');
+  try {
+    let count = 0;
+    for (const item of items) {
+      // 確保 ID 統一轉成字串
+      const docId = item.id.toString();
+      await setDoc(doc(itemsCollection, docId), {
+        ...item,
+        id: docId   // 強制存成字串 ID
+      });
+      count++;
     }
-  };
+    showToast(`已成功同步 ${count} 個商品到雲端！`, 'success');
+
+    // 同步完成後，強制重新從 Firestore 讀取一次（讓本機也確認最新狀態）
+    const snapshot = await getDocs(itemsCollection);
+    const freshItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    setItems(freshItems);
+
+  } catch (error) {
+    console.error("同步商品失敗:", error);
+    showToast('同步失敗，請稍後再試', 'error');
+  }
+};
 
   const generateInvoicePDF = async (transaction) => {
     const margin = 4;

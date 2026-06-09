@@ -398,81 +398,102 @@ const deleteItem = async (id) => {
   };
 
   const processCheckout = async () => {
-    let change = 0;
-    const paid = parseFloat(paidAmount) || 0;
-    if (selectedPayment === 'cash' && paid < finalTotal) {
-      setCheckoutError('支付金額不足');
-      return;
-    }
-    if (selectedPayment === 'cash') change = paid - finalTotal;
+  let change = 0;
+  const paid = parseFloat(paidAmount) || 0;
 
-    const invoiceNumber = generateInvoiceNumber();
-    let finalCustomerName = checkoutCustomerName.trim();
-    let finalCustomerPhone = checkoutCustomerPhone.trim();
+  if (selectedPayment === 'cash' && paid < finalTotal) {
+    setCheckoutError('支付金額不足');
+    return;
+  }
+  if (selectedPayment === 'cash') change = paid - finalTotal;
 
-    if (finalCustomerName) {
-      const exists = customers.some(c => c.name === finalCustomerName && c.phone === finalCustomerPhone);
-      if (!exists) {
-        const newCust = { 
-          id: Date.now(), 
-          name: finalCustomerName, 
-          phone: finalCustomerPhone 
-        };
-        try {
-          await setDoc(doc(customersCollection, newCust.id.toString()), newCust);
-        } catch (e) {
-          console.error("新增客戶失敗", e);
-        }
+  const invoiceNumber = generateInvoiceNumber();
+  let finalCustomerName = checkoutCustomerName.trim();
+  let finalCustomerPhone = checkoutCustomerPhone.trim();
+
+  // 新增客戶（如果有填寫）
+  if (finalCustomerName) {
+    const exists = customers.some(c => 
+      c.name === finalCustomerName && c.phone === finalCustomerPhone
+    );
+    if (!exists) {
+      const newCust = { 
+        id: Date.now(), 
+        name: finalCustomerName, 
+        phone: finalCustomerPhone 
+      };
+      try {
+        await setDoc(doc(customersCollection, newCust.id.toString()), newCust);
+      } catch (e) {
+        console.error("新增客戶失敗", e);
       }
     }
+  }
 
-    const newTransaction = {
-      id: Date.now(),
-      invoiceNumber,
-      time: new Date().toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit' }),
-      date: new Date().toISOString().split('T')[0],
-      items: [...cart],
-      subtotal,
-      discount: discountAmount,
-      adjustment,
-      total: finalTotal,
-      paymentMethod: paymentMethods.find(m => m.id === selectedPayment)?.label,
-      change,
-      customerName: finalCustomerName || null,
-      customerPhone: finalCustomerPhone || null,
-      pickupDate: pickupDate || null,
-      channel: checkoutChannel || null,
-      company: companyInfo
-    };
-
-    try {
-      await setDoc(doc(transactionsCollection, newTransaction.id.toString()), newTransaction);
-
-      for (const cartItem of cart) {
-        if (cartItem.type === 'product' && cartItem.stock !== null) {
-          const originalItem = items.find(i => i.id === cartItem.id);
-          if (originalItem) {
-            const newStock = Math.max(0, originalItem.stock - cartItem.qty);
-            await setDoc(doc(itemsCollection, cartItem.id.toString()), {
-              ...originalItem,
-              stock: newStock
-            });
-          }
-        }
-      }
-
-      setIsPaymentModalOpen(false);
-      setPaidAmount('');
-      setCheckoutError('');
-      setLastTransaction(newTransaction);
-      setIsSuccessModalOpen(true);
-      setTimeout(() => clearCart(), 300);
-
-    } catch (error) {
-      console.error("結帳失敗:", error);
-      showToast('結帳失敗，請稍後再試', 'error');
-    }
+  const newTransaction = {
+    id: Date.now(),
+    invoiceNumber,
+    time: new Date().toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit' }),
+    date: new Date().toISOString().split('T')[0],
+    items: [...cart],
+    subtotal,
+    discount: discountAmount,
+    adjustment,
+    total: finalTotal,
+    paymentMethod: paymentMethods.find(m => m.id === selectedPayment)?.label,
+    change,
+    customerName: finalCustomerName || null,
+    customerPhone: finalCustomerPhone || null,
+    pickupDate: pickupDate || null,
+    channel: checkoutChannel || null,
+    company: companyInfo
   };
+
+  try {
+    // 寫入訂單
+    await setDoc(doc(transactionsCollection, newTransaction.id.toString()), newTransaction);
+
+    // 扣庫存
+    for (const cartItem of cart) {
+      if (cartItem.type === 'product' && cartItem.stock !== null) {
+        const originalItem = items.find(i => i.id === cartItem.id);
+        if (originalItem) {
+          const newStock = Math.max(0, originalItem.stock - cartItem.qty);
+          await setDoc(doc(itemsCollection, cartItem.id.toString()), {
+            ...originalItem,
+            stock: newStock
+          });
+        }
+      }
+    }
+
+    // === 重要：無論如何都要關閉 Payment Modal ===
+    setIsPaymentModalOpen(false);
+    setPaidAmount('');
+    setCheckoutError('');
+    setCheckoutCustomerName('');
+    setCheckoutCustomerPhone('');
+    setCheckoutChannel('');
+    setPickupDate('');
+    setDiscountAmount(0);
+    setAdjustment(0);
+
+    // 顯示成功視窗
+    setLastTransaction(newTransaction);
+    setIsSuccessModalOpen(true);
+
+    // 清空購物車
+    setTimeout(() => {
+      clearCart();
+    }, 300);
+
+  } catch (error) {
+    console.error("結帳失敗:", error);
+    showToast('結帳失敗，請稍後再試', 'error');
+    // 發生錯誤時也關閉 Modal，避免卡住
+    setIsPaymentModalOpen(false);
+  }
+};
 
   const closePaymentModal = () => {
     setIsPaymentModalOpen(false);

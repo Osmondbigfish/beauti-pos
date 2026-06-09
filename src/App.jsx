@@ -217,7 +217,8 @@ function App() {
     return sum + price * item.qty;
   }, 0);
   const finalTotal = subtotal - discountAmount + adjustment;
-    // ==================== 所有 Handler 函數 ====================
+
+  // ==================== 所有 Handler 函數 ====================
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -326,7 +327,6 @@ function App() {
 
     try {
       await setDoc(doc(itemsCollection, newProduct.id.toString()), newProduct);
-      setIsAddItemModalOpen(false);
       showToast('商品/服務已成功新增！', 'success');
       setNewItem({
         name: '', price: '', type: 'product', category: '', 
@@ -335,6 +335,8 @@ function App() {
     } catch (error) {
       console.error("新增商品失敗:", error);
       showToast('新增失敗，請稍後再試', 'error');
+    } finally {
+      setIsAddItemModalOpen(false);
     }
   };
 
@@ -351,12 +353,13 @@ function App() {
 
     try {
       await setDoc(doc(itemsCollection, editingItem.id.toString()), editingItem);
-      setIsEditItemModalOpen(false);
-      setEditingItem(null);
       showToast('商品/服務已更新！', 'success');
     } catch (error) {
       console.error("更新商品失敗:", error);
       showToast('更新失敗，請稍後再試', 'error');
+    } finally {
+      setIsEditItemModalOpen(false);
+      setEditingItem(null);
     }
   };
 
@@ -615,11 +618,12 @@ function App() {
 
     try {
       await setDoc(doc(customersCollection, newCust.id.toString()), newCust);
-      setIsAddCustomerModalOpen(false);
       showToast('客戶新增成功！', 'success');
     } catch (error) {
       console.error("新增客戶失敗:", error);
       showToast('新增客戶失敗，請稍後再試', 'error');
+    } finally {
+      setIsAddCustomerModalOpen(false);
     }
   };
 
@@ -823,7 +827,6 @@ function App() {
     showToast('訂單已刪除，庫存已歸還', 'success');
   };
 
-  // ==================== 新增：同步商品到 Firebase ====================
   const syncItemsToFirestore = async () => {
     if (!window.confirm('確定要把目前電腦顯示的所有商品同步到雲端嗎？\n這會覆蓋 Firebase 上的商品資料。')) {
       return;
@@ -1247,7 +1250,8 @@ function App() {
     const whatsappUrl = phone ? `https://wa.me/${phone}?text=${encodedMessage}` : `https://wa.me/?text=${encodedMessage}`;
     window.open(whatsappUrl, '_blank');
   };
-    return (
+
+  return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white border-b sticky top-0 z-40">
         <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
@@ -1406,7 +1410,8 @@ function App() {
             </div>
           </div>
         )}
-                {/* ==================== 庫存頁面 ==================== */}
+
+        {/* ==================== 庫存頁面 ==================== */}
         {activeTab === 'inventory' && (
           <div>
             <div className="flex items-center justify-between mb-6">
@@ -2043,7 +2048,8 @@ function App() {
           </div>
         </div>
       )}
-            {/* Toast 通知 */}
+
+      {/* Toast 通知 */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-[9999] bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-xl flex items-center gap-2">
           {toast.type === 'error' && <AlertCircle className="w-5 h-5 text-red-400" />}

@@ -78,6 +78,7 @@ function App() {
   const [selectedPayment, setSelectedPayment] = useState('cash');
   const [paidAmount, setPaidAmount] = useState('');
   const [checkoutError, setCheckoutError] = useState('');
+  const [isCheckoutProcessing, setIsCheckoutProcessing] = useState(false);
   const [toast, setToast] = useState(null);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [lastTransaction, setLastTransaction] = useState(null);
@@ -87,9 +88,11 @@ function App() {
   const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
 
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
+  const [isAddCustomerSubmitting, setIsAddCustomerSubmitting] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ name: '', phone: '' });
 
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
+  const [isAddItemSubmitting, setIsAddItemSubmitting] = useState(false);
   const [newItem, setNewItem] = useState({
     name: '', price: '', type: 'product', category: '', hasVariants: false, variants: [], stock: '', isPopular: false
   });
@@ -103,12 +106,14 @@ function App() {
   );
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isAddAppointmentModalOpen, setIsAddAppointmentModalOpen] = useState(false);
+  const [isAddAppointmentSubmitting, setIsAddAppointmentSubmitting] = useState(false);
   const [newAppointment, setNewAppointment] = useState({ customerName: '', phone: '', date: '', time: '', notes: '' });
   const [isWhatsAppConfirmOpen, setIsWhatsAppConfirmOpen] = useState(false);
   const [pendingAppointment, setPendingAppointment] = useState(null);
 
   const [pickupDate, setPickupDate] = useState('');
   const [isEditItemModalOpen, setIsEditItemModalOpen] = useState(false);
+  const [isEditItemSubmitting, setIsEditItemSubmitting] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [selectedCustomerForHistory, setSelectedCustomerForHistory] = useState(null);
   const [isVariantModalOpen, setIsVariantModalOpen] = useState(false);
@@ -307,6 +312,8 @@ function App() {
   };
 
   const handleAddItem = async () => {
+    if (isAddItemSubmitting) return;
+
     if (!newItem.name || !newItem.price || !newItem.category) {
       showToast('請填寫名稱、價格與類別', 'error');
       return;
@@ -325,6 +332,7 @@ function App() {
       isPopular: newItem.isPopular
     };
 
+    setIsAddItemSubmitting(true);
     setIsAddItemModalOpen(false);
 
     try {
@@ -338,6 +346,8 @@ function App() {
       console.error("新增商品失敗:", error);
       showToast('新增失敗，請稍後再試', 'error');
       setIsAddItemModalOpen(true);
+    } finally {
+      setIsAddItemSubmitting(false);
     }
   };
 
@@ -347,10 +357,15 @@ function App() {
   };
 
   const handleEditItem = async () => {
+    if (isEditItemSubmitting) return;
+
     if (!editingItem.name || !editingItem.price || !editingItem.category) {
       showToast('請填寫名稱、價格與類別', 'error');
       return;
     }
+
+    setIsEditItemSubmitting(true);
+    setIsEditItemModalOpen(false);
 
     try {
       await setDoc(doc(itemsCollection, editingItem.id.toString()), editingItem);
@@ -359,8 +374,8 @@ function App() {
       console.error("更新商品失敗:", error);
       showToast('更新失敗，請稍後再試', 'error');
     } finally {
-      setIsEditItemModalOpen(false);
       setEditingItem(null);
+      setIsEditItemSubmitting(false);
     }
   };
 
@@ -391,6 +406,8 @@ const deleteItem = async (id) => {
     setCheckoutCustomerName('');
     setCheckoutCustomerPhone('');
     setCheckoutChannel('');
+    setCustomerSearchTerm('');
+    setShowCustomerSuggestions(false);
     setPickupDate('');
     setDiscountAmount(0);
     setAdjustment(0);
@@ -398,6 +415,8 @@ const deleteItem = async (id) => {
   };
 
   const processCheckout = async () => {
+  if (isCheckoutProcessing) return;
+
   let change = 0;
   const paid = parseFloat(paidAmount) || 0;
 
@@ -410,6 +429,10 @@ const deleteItem = async (id) => {
   const invoiceNumber = generateInvoiceNumber();
   let finalCustomerName = checkoutCustomerName.trim();
   let finalCustomerPhone = checkoutCustomerPhone.trim();
+
+  setIsCheckoutProcessing(true);
+  setIsPaymentModalOpen(false);
+  setShowCustomerSuggestions(false);
 
   // 新增客戶（如果有填寫）
   if (finalCustomerName) {
@@ -467,8 +490,6 @@ const deleteItem = async (id) => {
       }
     }
 
-    // === 重要：無論如何都要關閉 Payment Modal ===
-    setIsPaymentModalOpen(false);
     setPaidAmount('');
     setCheckoutError('');
     setCheckoutCustomerName('');
@@ -490,14 +511,16 @@ const deleteItem = async (id) => {
   } catch (error) {
     console.error("結帳失敗:", error);
     showToast('結帳失敗，請稍後再試', 'error');
-    // 發生錯誤時也關閉 Modal，避免卡住
-    setIsPaymentModalOpen(false);
+  } finally {
+    setIsCheckoutProcessing(false);
   }
 };
 
   const closePaymentModal = () => {
+    if (isCheckoutProcessing) return;
     setIsPaymentModalOpen(false);
     setCheckoutError('');
+    setShowCustomerSuggestions(false);
   };
 
   const closeSuccessModal = () => {
@@ -572,6 +595,8 @@ const deleteItem = async (id) => {
   };
 
   const handleAddAppointment = async () => {
+    if (isAddAppointmentSubmitting) return;
+
     if (!newAppointment.customerName || !newAppointment.phone || !newAppointment.time) {
       showToast('請填寫客戶姓名、電話與時間', 'error');
       return;
@@ -588,15 +613,20 @@ const deleteItem = async (id) => {
       createdAt: new Date().toISOString()
     };
 
+    setIsAddAppointmentSubmitting(true);
+    setIsAddAppointmentModalOpen(false);
+
     try {
       await setDoc(doc(appointmentsCollection, appointment.id.toString()), appointment);
-      setIsAddAppointmentModalOpen(false);
       setPendingAppointment(appointment);
       setIsWhatsAppConfirmOpen(true);
       showToast('預約已成功新增', 'success');
     } catch (error) {
       console.error("新增預約失敗:", error);
       showToast('新增預約失敗，請稍後再試', 'error');
+      setIsAddAppointmentModalOpen(true);
+    } finally {
+      setIsAddAppointmentSubmitting(false);
     }
   };
 
@@ -626,6 +656,8 @@ const deleteItem = async (id) => {
   };
 
   const handleAddCustomer = async () => {
+    if (isAddCustomerSubmitting) return;
+
     if (!newCustomer.name) {
       showToast('請輸入客戶姓名', 'error');
       return;
@@ -643,14 +675,18 @@ const deleteItem = async (id) => {
       phone: newCustomer.phone.trim() 
     };
 
+    setIsAddCustomerSubmitting(true);
+    setIsAddCustomerModalOpen(false);
+
     try {
       await setDoc(doc(customersCollection, newCust.id.toString()), newCust);
       showToast('客戶新增成功！', 'success');
     } catch (error) {
       console.error("新增客戶失敗:", error);
       showToast('新增客戶失敗，請稍後再試', 'error');
+      setIsAddCustomerModalOpen(true);
     } finally {
-      setIsAddCustomerModalOpen(false);
+      setIsAddCustomerSubmitting(false);
     }
   };
 
@@ -1746,6 +1782,82 @@ const deleteItem = async (id) => {
 
       {/* ==================== 所有 Modal ==================== */}
 
+      {/* Add Appointment Modal */}
+      {isAddAppointmentModalOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={() => !isAddAppointmentSubmitting && setIsAddAppointmentModalOpen(false)}
+        >
+          <div className="bg-white rounded-3xl p-8 w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <h2 className="text-2xl font-bold mb-6">新增預約</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-slate-600">客戶姓名 *</label>
+                <input
+                  type="text"
+                  value={newAppointment.customerName}
+                  onChange={e => setNewAppointment({ ...newAppointment, customerName: e.target.value })}
+                  className="w-full border p-3 rounded-xl mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-600">電話 *</label>
+                <input
+                  type="text"
+                  value={newAppointment.phone}
+                  onChange={e => setNewAppointment({ ...newAppointment, phone: e.target.value })}
+                  className="w-full border p-3 rounded-xl mt-1"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-slate-600">日期</label>
+                  <input
+                    type="date"
+                    value={newAppointment.date}
+                    onChange={e => setNewAppointment({ ...newAppointment, date: e.target.value })}
+                    className="w-full border p-3 rounded-xl mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-600">時間 *</label>
+                  <input
+                    type="time"
+                    value={newAppointment.time}
+                    onChange={e => setNewAppointment({ ...newAppointment, time: e.target.value })}
+                    className="w-full border p-3 rounded-xl mt-1"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-600">備註</label>
+                <textarea
+                  value={newAppointment.notes}
+                  onChange={e => setNewAppointment({ ...newAppointment, notes: e.target.value })}
+                  className="w-full border p-3 rounded-xl mt-1 min-h-24"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-8">
+              <button
+                onClick={() => setIsAddAppointmentModalOpen(false)}
+                disabled={isAddAppointmentSubmitting}
+                className="flex-1 py-3 border rounded-xl disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleAddAppointment}
+                disabled={isAddAppointmentSubmitting}
+                className="flex-1 py-3 bg-rose-600 text-white rounded-xl disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isAddAppointmentSubmitting ? '新增中...' : '確認新增'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Payment Modal */}
       {isPaymentModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={closePaymentModal}>
@@ -1814,7 +1926,13 @@ const deleteItem = async (id) => {
 
             <div className="flex gap-3">
               <button onClick={closePaymentModal} className="flex-1 py-3 border rounded-xl">取消</button>
-              <button onClick={processCheckout} className="flex-1 py-3 bg-rose-600 text-white rounded-xl">確認交易</button>
+              <button
+                onClick={processCheckout}
+                disabled={isCheckoutProcessing}
+                className="flex-1 py-3 bg-rose-600 text-white rounded-xl disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isCheckoutProcessing ? '處理中...' : '確認交易'}
+              </button>
             </div>
           </div>
         </div>
@@ -1855,7 +1973,13 @@ const deleteItem = async (id) => {
             </div>
             <div className="flex gap-3 mt-8">
               <button onClick={() => setIsAddCustomerModalOpen(false)} className="flex-1 py-3 border rounded-xl">取消</button>
-              <button onClick={handleAddCustomer} className="flex-1 py-3 bg-rose-600 text-white rounded-xl">確認新增</button>
+              <button
+                onClick={handleAddCustomer}
+                disabled={isAddCustomerSubmitting}
+                className="flex-1 py-3 bg-rose-600 text-white rounded-xl disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isAddCustomerSubmitting ? '新增中...' : '確認新增'}
+              </button>
             </div>
           </div>
         </div>
@@ -1925,7 +2049,13 @@ const deleteItem = async (id) => {
 
             <div className="flex gap-3 mt-8">
               <button onClick={() => setIsAddItemModalOpen(false)} className="flex-1 py-3 border rounded-xl">取消</button>
-              <button onClick={handleAddItem} className="flex-1 py-3 bg-rose-600 text-white rounded-xl">確認新增</button>
+              <button
+                onClick={handleAddItem}
+                disabled={isAddItemSubmitting}
+                className="flex-1 py-3 bg-rose-600 text-white rounded-xl disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isAddItemSubmitting ? '新增中...' : '確認新增'}
+              </button>
             </div>
           </div>
         </div>
@@ -1994,7 +2124,13 @@ const deleteItem = async (id) => {
 
             <div className="flex gap-3 mt-8">
               <button onClick={() => setIsEditItemModalOpen(false)} className="flex-1 py-3 border rounded-xl">取消</button>
-              <button onClick={handleEditItem} className="flex-1 py-3 bg-rose-600 text-white rounded-xl">儲存修改</button>
+              <button
+                onClick={handleEditItem}
+                disabled={isEditItemSubmitting}
+                className="flex-1 py-3 bg-rose-600 text-white rounded-xl disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isEditItemSubmitting ? '儲存中...' : '儲存修改'}
+              </button>
             </div>
           </div>
         </div>

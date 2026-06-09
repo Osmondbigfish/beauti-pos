@@ -366,19 +366,24 @@ const handleAddItem = async () => {
     }
   };
 
-  const deleteItem = async (id) => {
-    if (!window.confirm('確定要刪除此商品/服務嗎？')) {
-      return;
-    }
+const deleteItem = async (id) => {
+  if (!window.confirm('確定要刪除此商品/服務嗎？')) {
+    return;
+  }
 
-    try {
-      await deleteDoc(doc(itemsCollection, id.toString()));
-      showToast('商品/服務已刪除', 'success');
-    } catch (error) {
-      console.error("刪除商品失敗:", error);
-      showToast('刪除失敗，請稍後再試', 'error');
-    }
-  };
+  try {
+    // 先從 Firestore 刪除（如果存在）
+    await deleteDoc(doc(itemsCollection, id.toString()));
+
+    // 無論 Firestore 有沒有這筆資料，都從本地 state 移除
+    setItems(prev => prev.filter(item => item.id !== id));
+
+    showToast('商品/服務已刪除', 'success');
+  } catch (error) {
+    console.error("刪除商品失敗:", error);
+    showToast('刪除失敗，請稍後再試', 'error');
+  }
+};
 
   const openCheckout = () => {
     if (cart.length === 0) return;

@@ -123,14 +123,10 @@ function App() {
   // ==================== Firestore 即時同步 ====================
   useEffect(() => {
     const unsubscribeItems = onSnapshot(itemsCollection, (snapshot) => {
-      if (!snapshot.empty) {
-        const itemsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setItems(itemsData);
-      } else {
-        setItems(initialItems);
-      }
-    });
-
+if (!snapshot.empty) {
+  const itemsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  setItems(itemsData);
+} 
     const unsubscribeTransactions = onSnapshot(
       query(transactionsCollection, orderBy("id", "desc")), 
       (snapshot) => {
@@ -372,11 +368,11 @@ const deleteItem = async (id) => {
   }
 
   try {
-    // 先從 Firestore 刪除（如果存在）
+    // 嘗試從 Firestore 刪除
     await deleteDoc(doc(itemsCollection, id.toString()));
 
-    // 無論 Firestore 有沒有這筆資料，都從本地 state 移除
-    setItems(prev => prev.filter(item => item.id !== id));
+    // 強制從本地 state 移除（不管 Firestore 有沒有這筆資料）
+    setItems(prevItems => prevItems.filter(item => item.id !== id));
 
     showToast('商品/服務已刪除', 'success');
   } catch (error) {

@@ -6,6 +6,17 @@ import {
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
+import { db } from './firebase';
+import { 
+  collection, 
+  doc, 
+  setDoc, 
+  getDocs, 
+  onSnapshot, 
+  deleteDoc,
+  query,
+  orderBy 
+} from "firebase/firestore";
 
 const companyInfo = {
   name: "麗明珠真髮中心",
@@ -52,6 +63,11 @@ const useDebounce = (value, delay) => {
 };
 
 function App() {
+  const itemsCollection = collection(db, "items");
+  const transactionsCollection = collection(db, "transactions");
+  const customersCollection = collection(db, "customers");
+  const appointmentsCollection = collection(db, "appointments");
+
   const [activeTab, setActiveTab] = useState('sales');
   const [items, setItems] = useState(initialItems);
   const [cart, setCart] = useState([]);
@@ -104,20 +120,42 @@ function App() {
   const [checkoutCustomerPhone, setCheckoutCustomerPhone] = useState('');
   const [checkoutChannel, setCheckoutChannel] = useState('');
 
-  // localStorage
+  // ==================== Firestore 即時同步 ====================
   useEffect(() => {
-    const savedItems = localStorage.getItem('pos_items'); if (savedItems) setItems(JSON.parse(savedItems));
-    const savedTransactions = localStorage.getItem('pos_transactions'); if (savedTransactions) setTransactions(JSON.parse(savedTransactions));
-    const savedCart = localStorage.getItem('pos_cart'); if (savedCart) setCart(JSON.parse(savedCart));
-    const savedCustomers = localStorage.getItem('pos_customers'); if (savedCustomers) setCustomers(JSON.parse(savedCustomers));
-    const savedAppointments = localStorage.getItem('pos_appointments'); if (savedAppointments) setAppointments(JSON.parse(savedAppointments));
-  }, []);
+    const unsubscribeItems = onSnapshot(itemsCollection, (snapshot) => {
+      if (!snapshot.empty) {
+        const itemsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setItems(itemsData);
+      } else {
+        setItems(initialItems);
+      }
+    });
 
-  useEffect(() => { localStorage.setItem('pos_items', JSON.stringify(items)); }, [items]);
-  useEffect(() => { localStorage.setItem('pos_transactions', JSON.stringify(transactions)); }, [transactions]);
-  useEffect(() => { localStorage.setItem('pos_cart', JSON.stringify(cart)); }, [cart]);
-  useEffect(() => { localStorage.setItem('pos_customers', JSON.stringify(customers)); }, [customers]);
-  useEffect(() => { localStorage.setItem('pos_appointments', JSON.stringify(appointments)); }, [appointments]);
+    const unsubscribeTransactions = onSnapshot(
+      query(transactionsCollection, orderBy("id", "desc")), 
+      (snapshot) => {
+        const txData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setTransactions(txData);
+      }
+    );
+
+    const unsubscribeCustomers = onSnapshot(customersCollection, (snapshot) => {
+      const customersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setCustomers(customersData);
+    });
+
+    const unsubscribeAppointments = onSnapshot(appointmentsCollection, (snapshot) => {
+      const appointmentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setAppointments(appointmentsData);
+    });
+
+    return () => {
+      unsubscribeItems();
+      unsubscribeTransactions();
+      unsubscribeCustomers();
+      unsubscribeAppointments();
+    };
+  }, []);
 
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
@@ -179,8 +217,7 @@ function App() {
     return sum + price * item.qty;
   }, 0);
   const finalTotal = subtotal - discountAmount + adjustment;
-
-  // ==================== 所有 Handler 函數 ====================
+    // ==================== 所有 Handler 函數 ====================
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -268,7 +305,7 @@ function App() {
     setIsAddItemModalOpen(true);
   };
 
-  const handleAddItem = () => {
+  const handleAddItem = async () => {
     if (!newItem.name || !newItem.price || !newItem.category) {
       showToast('請填寫名稱、價格與類別', 'error');
       return;
@@ -287,9 +324,18 @@ function App() {
       isPopular: newItem.isPopular
     };
 
-    setItems(prev => [...prev, newProduct]);
-    setIsAddItemModalOpen(false);
-    showToast('商品/服務已成功新增！', 'success');
+    try {
+      await setDoc(doc(itemsCollection, newProduct.id.toString()), newProduct);
+      setIsAddItemModalOpen(false);
+      showToast('商品/服務已成功新增！', 'success');
+      setNewItem({
+        name: '', price: '', type: 'product', category: '', 
+        hasVariants: false, variants: [], stock: '', isPopular: false
+      });
+    } catch (error) {
+      console.error("新增商品失敗:", error);
+      showToast('新增失敗，請稍後再試', 'error');
+    }
   };
 
   const openEditItemModal = (item) => {
@@ -297,29 +343,34 @@ function App() {
     setIsEditItemModalOpen(true);
   };
 
-  const handleEditItem = () => {
+  const handleEditItem = async () => {
     if (!editingItem.name || !editingItem.price || !editingItem.category) {
       showToast('請填寫名稱、價格與類別', 'error');
       return;
     }
 
-    setItems(prev =>
-      prev.map(item =>
-        item.id === editingItem.id
-          ? { ...editingItem, variants: editingItem.hasVariants ? editingItem.variants : [] }
-          : item
-      )
-    );
-
-    setIsEditItemModalOpen(false);
-    setEditingItem(null);
-    showToast('商品/服務已更新！', 'success');
+    try {
+      await setDoc(doc(itemsCollection, editingItem.id.toString()), editingItem);
+      setIsEditItemModalOpen(false);
+      setEditingItem(null);
+      showToast('商品/服務已更新！', 'success');
+    } catch (error) {
+      console.error("更新商品失敗:", error);
+      showToast('更新失敗，請稍後再試', 'error');
+    }
   };
 
-  const deleteItem = (id) => {
-    if (window.confirm('確定要刪除此商品/服務嗎？')) {
-      setItems(prev => prev.filter(item => item.id !== id));
+  const deleteItem = async (id) => {
+    if (!window.confirm('確定要刪除此商品/服務嗎？')) {
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(itemsCollection, id.toString()));
       showToast('商品/服務已刪除', 'success');
+    } catch (error) {
+      console.error("刪除商品失敗:", error);
+      showToast('刪除失敗，請稍後再試', 'error');
     }
   };
 
@@ -337,7 +388,7 @@ function App() {
     setIsPaymentModalOpen(true);
   };
 
-  const processCheckout = () => {
+  const processCheckout = async () => {
     let change = 0;
     const paid = parseFloat(paidAmount) || 0;
     if (selectedPayment === 'cash' && paid < finalTotal) {
@@ -353,7 +404,16 @@ function App() {
     if (finalCustomerName) {
       const exists = customers.some(c => c.name === finalCustomerName && c.phone === finalCustomerPhone);
       if (!exists) {
-        setCustomers(prev => [...prev, { id: Date.now(), name: finalCustomerName, phone: finalCustomerPhone }]);
+        const newCust = { 
+          id: Date.now(), 
+          name: finalCustomerName, 
+          phone: finalCustomerPhone 
+        };
+        try {
+          await setDoc(doc(customersCollection, newCust.id.toString()), newCust);
+        } catch (e) {
+          console.error("新增客戶失敗", e);
+        }
       }
     }
 
@@ -376,23 +436,33 @@ function App() {
       company: companyInfo
     };
 
-    const updatedItems = items.map(item => {
-      const cartItems = cart.filter(c => c.id === item.id);
-      if (cartItems.length > 0 && item.type === 'product' && item.stock !== null) {
-        const totalQty = cartItems.reduce((sum, c) => sum + c.qty, 0);
-        return { ...item, stock: Math.max(0, item.stock - totalQty) };
-      }
-      return item;
-    });
+    try {
+      await setDoc(doc(transactionsCollection, newTransaction.id.toString()), newTransaction);
 
-    setItems(updatedItems);
-    setTransactions(prev => [newTransaction, ...prev]);
-    setIsPaymentModalOpen(false);
-    setPaidAmount('');
-    setCheckoutError('');
-    setLastTransaction(newTransaction);
-    setIsSuccessModalOpen(true);
-    setTimeout(() => clearCart(), 300);
+      for (const cartItem of cart) {
+        if (cartItem.type === 'product' && cartItem.stock !== null) {
+          const originalItem = items.find(i => i.id === cartItem.id);
+          if (originalItem) {
+            const newStock = Math.max(0, originalItem.stock - cartItem.qty);
+            await setDoc(doc(itemsCollection, cartItem.id.toString()), {
+              ...originalItem,
+              stock: newStock
+            });
+          }
+        }
+      }
+
+      setIsPaymentModalOpen(false);
+      setPaidAmount('');
+      setCheckoutError('');
+      setLastTransaction(newTransaction);
+      setIsSuccessModalOpen(true);
+      setTimeout(() => clearCart(), 300);
+
+    } catch (error) {
+      console.error("結帳失敗:", error);
+      showToast('結帳失敗，請稍後再試', 'error');
+    }
   };
 
   const closePaymentModal = () => {
@@ -471,7 +541,7 @@ function App() {
     setIsAddAppointmentModalOpen(true);
   };
 
-  const handleAddAppointment = () => {
+  const handleAddAppointment = async () => {
     if (!newAppointment.customerName || !newAppointment.phone || !newAppointment.time) {
       showToast('請填寫客戶姓名、電話與時間', 'error');
       return;
@@ -488,11 +558,16 @@ function App() {
       createdAt: new Date().toISOString()
     };
 
-    setAppointments(prev => [...prev, appointment]);
-    setIsAddAppointmentModalOpen(false);
-    setPendingAppointment(appointment);
-    setIsWhatsAppConfirmOpen(true);
-    showToast('預約已成功新增', 'success');
+    try {
+      await setDoc(doc(appointmentsCollection, appointment.id.toString()), appointment);
+      setIsAddAppointmentModalOpen(false);
+      setPendingAppointment(appointment);
+      setIsWhatsAppConfirmOpen(true);
+      showToast('預約已成功新增', 'success');
+    } catch (error) {
+      console.error("新增預約失敗:", error);
+      showToast('新增預約失敗，請稍後再試', 'error');
+    }
   };
 
   const updateAppointmentStatus = (id, newStatus) => {
@@ -501,10 +576,17 @@ function App() {
     );
   };
 
-  const deleteAppointment = (id) => {
-    if (window.confirm('確定要刪除此預約嗎？')) {
-      setAppointments(prev => prev.filter(a => a.id !== id));
+  const deleteAppointment = async (id) => {
+    if (!window.confirm('確定要刪除此預約嗎？')) {
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(appointmentsCollection, id.toString()));
       showToast('預約已刪除', 'success');
+    } catch (error) {
+      console.error("刪除預約失敗:", error);
+      showToast('刪除預約失敗，請稍後再試', 'error');
     }
   };
 
@@ -513,24 +595,32 @@ function App() {
     setIsAddCustomerModalOpen(true);
   };
 
-  const handleAddCustomer = () => {
+  const handleAddCustomer = async () => {
     if (!newCustomer.name) {
       showToast('請輸入客戶姓名', 'error');
       return;
     }
+
     const exists = customers.some(c => c.name === newCustomer.name && c.phone === newCustomer.phone);
     if (exists) {
       showToast('此客戶已存在', 'error');
       return;
     }
+
     const newCust = { 
       id: Date.now(), 
       name: newCustomer.name.trim(), 
       phone: newCustomer.phone.trim() 
     };
-    setCustomers(prev => [...prev, newCust]);
-    setIsAddCustomerModalOpen(false);
-    showToast('客戶新增成功！', 'success');
+
+    try {
+      await setDoc(doc(customersCollection, newCust.id.toString()), newCust);
+      setIsAddCustomerModalOpen(false);
+      showToast('客戶新增成功！', 'success');
+    } catch (error) {
+      console.error("新增客戶失敗:", error);
+      showToast('新增客戶失敗，請稍後再試', 'error');
+    }
   };
 
   const exportCustomersTransactionsCSV = () => {
@@ -732,7 +822,8 @@ function App() {
     setTransactions(prev => prev.filter(tx => tx.id !== id));
     showToast('訂單已刪除，庫存已歸還', 'success');
   };
-    const generateInvoicePDF = async (transaction) => {
+
+  const generateInvoicePDF = async (transaction) => {
     const margin = 4;
     const pageWidth = 148;
     const contentWidth = pageWidth - (margin * 2);
@@ -1575,7 +1666,8 @@ function App() {
           </div>
         )}
       </div>
-            {/* ==================== 所有 Modal ==================== */}
+
+      {/* ==================== 所有 Modal ==================== */}
 
       {/* Payment Modal */}
       {isPaymentModalOpen && (
@@ -1856,8 +1948,15 @@ function App() {
             <h3 className="text-xl font-bold mb-4">是否發送 WhatsApp 確認訊息？</h3>
             <p className="text-slate-600 mb-6">預約已成功新增，是否立即發送確認訊息給客戶？</p>
             <div className="flex gap-3">
-              <button onClick={skipWhatsApp} className="flex-1 py-3 border rounded-xl">不用發送</button>
-              <button onClick={() => sendWhatsAppConfirmation(pendingAppointment)} className="flex-1 py-3 bg-green-600 text-white rounded-xl">發送確認訊息</button>
+              <button onClick={() => { setIsWhatsAppConfirmOpen(false); setPendingAppointment(null); }} className="flex-1 py-3 border rounded-xl">不用發送</button>
+              <button onClick={() => {
+                const phone = pendingAppointment.phone ? pendingAppointment.phone.replace(/\s/g, '') : '';
+                const message = `你好 ${pendingAppointment.customerName}，感謝你聯絡麗明珠真髮中心，我們已為你預約 ${pendingAppointment.date} ${pendingAppointment.time}。如需更改時間，歡迎隨時聯絡我們。`;
+                const whatsappUrl = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}` : `https://wa.me/?text=${encodeURIComponent(message)}`;
+                window.open(whatsappUrl, '_blank');
+                setIsWhatsAppConfirmOpen(false);
+                setPendingAppointment(null);
+              }} className="flex-1 py-3 bg-green-600 text-white rounded-xl">發送確認訊息</button>
             </div>
           </div>
         </div>

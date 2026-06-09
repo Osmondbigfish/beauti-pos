@@ -306,39 +306,42 @@ function App() {
     setIsAddItemModalOpen(true);
   };
 
-  const handleAddItem = async () => {
-    if (!newItem.name || !newItem.price || !newItem.category) {
-      showToast('請填寫名稱、價格與類別', 'error');
-      return;
-    }
+const handleAddItem = async () => {
+  if (!newItem.name || !newItem.price || !newItem.category) {
+    showToast('請填寫名稱、價格與類別', 'error');
+    return;
+  }
 
-    const newProduct = {
-      id: Date.now(),
-      name: newItem.name,
-      price: parseInt(newItem.price),
-      type: newItem.type,
-      category: newItem.category,
-      hasVariants: newItem.hasVariants,
-      variants: newItem.hasVariants ? newItem.variants : [],
-      stock: newItem.type === 'product' ? (parseInt(newItem.stock) || 0) : null,
-      duration: newItem.type === 'service' ? '約3-5天加工' : null,
-      isPopular: newItem.isPopular
-    };
-
-    try {
-      await setDoc(doc(itemsCollection, newProduct.id.toString()), newProduct);
-      showToast('商品/服務已成功新增！', 'success');
-      setNewItem({
-        name: '', price: '', type: 'product', category: '', 
-        hasVariants: false, variants: [], stock: '', isPopular: false
-      });
-    } catch (error) {
-      console.error("新增商品失敗:", error);
-      showToast('新增失敗，請稍後再試', 'error');
-    } finally {
-      setIsAddItemModalOpen(false);
-    }
+  const newProduct = {
+    id: Date.now(),
+    name: newItem.name,
+    price: parseInt(newItem.price),
+    type: newItem.type,
+    category: newItem.category,
+    hasVariants: newItem.hasVariants,
+    variants: newItem.hasVariants ? newItem.variants : [],
+    stock: newItem.type === 'product' ? (parseInt(newItem.stock) || 0) : null,
+    duration: newItem.type === 'service' ? '約3-5天加工' : null,
+    isPopular: newItem.isPopular
   };
+
+  // 先關閉 Modal（樂觀更新）
+  setIsAddItemModalOpen(false);
+
+  try {
+    await setDoc(doc(itemsCollection, newProduct.id.toString()), newProduct);
+    showToast('商品/服務已成功新增！', 'success');
+    setNewItem({
+      name: '', price: '', type: 'product', category: '', 
+      hasVariants: false, variants: [], stock: '', isPopular: false
+    });
+  } catch (error) {
+    console.error("新增商品失敗:", error);
+    showToast('新增失敗，請稍後再試', 'error');
+    // 如果失敗，把 Modal 再打開
+    setIsAddItemModalOpen(true);
+  }
+};
 
   const openEditItemModal = (item) => {
     setEditingItem({ ...item, variants: item.variants || [] });

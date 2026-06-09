@@ -600,6 +600,23 @@ function App() {
       showToast('請輸入客戶姓名', 'error');
       return;
     }
+  const syncItemsToFirestore = async () => {
+    if (!window.confirm('確定要把目前電腦顯示的所有商品同步到雲端嗎？\n這會覆蓋 Firebase 上的商品資料。')) {
+      return;
+    }
+
+    try {
+      let count = 0;
+      for (const item of items) {
+        await setDoc(doc(itemsCollection, item.id.toString()), item);
+        count++;
+      }
+      showToast(`已成功同步 ${count} 個商品到雲端！`, 'success');
+    } catch (error) {
+      console.error("同步商品失敗:", error);
+      showToast('同步失敗，請稍後再試', 'error');
+    }
+  };
 
     const exists = customers.some(c => c.name === newCustomer.name && c.phone === newCustomer.phone);
     if (exists) {
@@ -1388,14 +1405,22 @@ function App() {
           </div>
         )}
                 {/* ==================== 庫存頁面 ==================== */}
-        {activeTab === 'inventory' && (
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-semibold tracking-tight">庫存管理</h2>
-              <button onClick={openAddItemModal} className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 text-white rounded-xl hover:bg-rose-700 font-medium">
-                <Plus className="w-4 h-4" /> 添加商品 / 服務
-              </button>
-            </div>
+{activeTab === 'inventory' && (
+  <div>
+    <div className="flex items-center justify-between mb-6">
+      <h2 className="text-2xl font-semibold tracking-tight">庫存管理</h2>
+      <div className="flex gap-3">
+        <button 
+          onClick={syncItemsToFirestore} 
+          className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-medium"
+        >
+          <Upload className="w-4 h-4" /> 同步所有商品到雲端
+        </button>
+        <button onClick={openAddItemModal} className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 text-white rounded-xl hover:bg-rose-700 font-medium">
+          <Plus className="w-4 h-4" /> 添加商品 / 服務
+        </button>
+      </div>
+    </div>
             <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
               <table className="pos-table w-full">
                 <thead>
